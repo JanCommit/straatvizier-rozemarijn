@@ -1,0 +1,24 @@
+segments:
+  - telraam_segment_id: 155073
+    street: Rozemarijnstraat
+
+  - telraam_segment_id: 9000006048
+    street: Bernard Spaelaan
+
+  - telraam_segment_id: 155401
+    street: Coupure Links
+
+  - telraam_segment_id: 9000008840
+    street: Papagaaistraat
+
+  - telraam_segment_id: 9000006262
+    street: Wispelbergstraat
+
+  - telraam_segment_id: 154163
+    street: Annonciadenstraat
+
+  - telraam_segment_id: 9000011803
+    street: Iepenstraat
+
+  - telraam_segment_id: 9000007115
+    street: Rooigemlaan
