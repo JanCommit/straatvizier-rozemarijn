@@ -7,8 +7,8 @@ from plotly.subplots import make_subplots
 import streamlit as st
 
 UI_PRIMARY = "#2E6F8E"
-MAIN_STREET_COLOR = "#7FA6BC"
-COMPARE_STREET_COLOR = "#A89CC8"
+MAIN_STREET_COLOR = "#1E88E5"
+COMPARE_STREET_COLOR = "#80649A"
 MAIN_TREND_COLOR = "#E8655B"
 COMPARE_TREND_COLOR = "#6F5A8C"
 GRID_COLOR = "#D1D8DE"
@@ -18,7 +18,7 @@ IVORY = "#F4F1E8"
 SAGE = "#C7D0C2"
 
 LOCAL_TIMEZONE = "Europe/Brussels"
-APP_VERSION = "0.4.0"
+APP_VERSION = "0.5.2"
 
 PROJECT_ROOT = Path(__file__).resolve().parent
 SRC_DIR = PROJECT_ROOT / "src"
@@ -664,6 +664,7 @@ compare = st.sidebar.checkbox(
 )
 
 comparison_street = None
+comparison_layout = "Onder elkaar"
 
 if compare:
     comparison_street = st.sidebar.selectbox(
@@ -673,6 +674,20 @@ if compare:
             for street in street_names
             if street != selected_street
         ],
+    )
+
+    comparison_layout = st.sidebar.radio(
+        "Vergelijkingsweergave",
+        [
+            "Onder elkaar",
+            "Samen in één grafiek",
+        ],
+        index=0,
+        help=(
+            "Onder elkaar toont elke straat apart. "
+            "Samen in één grafiek maakt absolute verschillen "
+            "tussen beide straten direct zichtbaar."
+        ),
     )
 
     st.sidebar.caption(
@@ -959,7 +974,14 @@ avg_uptime_text = (
 )
 
 comparison_note = (
-    f" · vergelijking met {comparison_street}"
+    (
+        f" · vergelijking met {comparison_street}"
+        + (
+            " · samen in één grafiek"
+            if comparison_layout == "Samen in één grafiek"
+            else ""
+        )
+    )
     if compare
     else ""
 )
@@ -1234,17 +1256,27 @@ if view == "24u-profiel":
 # Plot
 # ============================================================
 
+comparison_overlay = (
+    compare
+    and comparison_layout == "Samen in één grafiek"
+)
+
 rows = (
     2
-    if compare
+    if compare and not comparison_overlay
     else 1
 )
 
 fig = make_subplots(
     rows=rows,
     cols=1,
+    specs=[
+        [{"secondary_y": True}]
+        for _ in range(rows)
+    ],
     shared_xaxes=(
         compare
+        and not comparison_overlay
         and view in {
             "Per uur",
             "Per dag",
@@ -1254,7 +1286,7 @@ fig = make_subplots(
     ),
     vertical_spacing=(
         .10
-        if compare
+        if compare and not comparison_overlay
         else 0
     ),
     subplot_titles=(
@@ -1262,7 +1294,7 @@ fig = make_subplots(
             selected_street,
             comparison_street,
         ]
-        if compare
+        if compare and not comparison_overlay
         else None
     ),
 )
@@ -1285,7 +1317,11 @@ y_label = add_view(
 if compare:
     add_view(
         fig=fig,
-        row=2,
+        row=(
+            1
+            if comparison_overlay
+            else 2
+        ),
         view=view,
         street=comparison_street,
         daily=daily_compare,
@@ -1297,6 +1333,38 @@ if compare:
         hourly=hourly_compare,
         hour_profile=hour_profile_compare,
         is_comparison=True,
+    )
+
+
+# Forceer de secundaire y-assen om zichtbaar te worden.
+# Zonder een trace op secondary_y laat Plotly de rechter ticklabels soms weg.
+fig.add_trace(
+    go.Scatter(
+        x=[None],
+        y=[None],
+        mode="markers",
+        marker=dict(opacity=0),
+        showlegend=False,
+        hoverinfo="skip",
+    ),
+    row=1,
+    col=1,
+    secondary_y=True,
+)
+
+if compare and not comparison_overlay:
+    fig.add_trace(
+        go.Scatter(
+            x=[None],
+            y=[None],
+            mode="markers",
+            marker=dict(opacity=0),
+            showlegend=False,
+            hoverinfo="skip",
+        ),
+        row=2,
+        col=1,
+        secondary_y=True,
     )
 
 
@@ -1326,7 +1394,7 @@ fig.update_yaxes(
     col=1,
 )
 
-if compare:
+if compare and not comparison_overlay:
     fig.update_yaxes(
         title_text=y_label,
         gridcolor=GRID_COLOR,
@@ -1354,6 +1422,44 @@ if compare:
     )
 
 
+# Dezelfde y-schaal ook rechts tonen.
+# Alleen de cijfers worden gespiegeld; de as-titel blijft links.
+fig.update_yaxes(
+    title_text=None,
+    showgrid=False,
+    zeroline=False,
+    showticklabels=True,
+    ticks="outside",
+    tickfont=dict(
+        size=13,
+        color=AXIS_TEXT_COLOR,
+        family="Arial",
+    ),
+    matches="y",
+    row=1,
+    col=1,
+    secondary_y=True,
+)
+
+if compare and not comparison_overlay:
+    fig.update_yaxes(
+        title_text=None,
+        showgrid=False,
+        zeroline=False,
+        showticklabels=True,
+        ticks="outside",
+        tickfont=dict(
+            size=13,
+            color=AXIS_TEXT_COLOR,
+            family="Arial",
+        ),
+        matches="y3",
+        row=2,
+        col=1,
+        secondary_y=True,
+    )
+
+
 fig.update_xaxes(
     tickfont=dict(
         size=12,
@@ -1366,6 +1472,7 @@ fig.update_xaxes(
 # Bij vergelijking: toon tijdslabels ook op de bovenste gedeelde x-as.
 if (
     compare
+    and not comparison_overlay
     and view in {
         "Per uur",
         "Per dag",
@@ -1391,7 +1498,7 @@ for annotation in fig.layout.annotations:
 fig.update_layout(
     height=(
         720
-        if compare
+        if compare and not comparison_overlay
         else 500
     ),
     hovermode="x unified",
@@ -1406,11 +1513,11 @@ fig.update_layout(
     margin=dict(
         t=(
             45
-            if compare
+            if compare and not comparison_overlay
             else 20
         ),
         l=20,
-        r=20,
+        r=55,
         b=20,
     ),
 )
