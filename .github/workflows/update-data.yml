@@ -1,0 +1,45 @@
+name: Update Telraam data
+
+on:
+  workflow_dispatch:
+
+  schedule:
+    # Dagelijks om 04:30 UTC.
+    # In België is dit 05:30 in de winter
+    # en 06:30 in de zomer.
+    - cron: "30 2 * * *"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: update-telraam-data
+  cancel-in-progress: false
+
+jobs:
+  update-data:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Update recent Telraam data
+        env:
+          TELRAAM_API_KEY: ${{ secrets.TELRAAM_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+        run: |
+          python scripts/update_recent.py
