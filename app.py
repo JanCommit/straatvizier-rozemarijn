@@ -18,7 +18,7 @@ IVORY = "#F4F1E8"
 SAGE = "#C7D0C2"
 
 LOCAL_TIMEZONE = "Europe/Brussels"
-APP_VERSION = "0.5.2"
+APP_VERSION = "0.6.0"
 
 PROJECT_ROOT = Path(__file__).resolve().parent
 SRC_DIR = PROJECT_ROOT / "src"
@@ -30,6 +30,7 @@ from straatvizier.analysis import (
     MODES,
     weekly_average_daily_traffic,
     monthly_average_daily_traffic,
+    yearly_average_daily_traffic,
     add_missing_days_as_gaps,
     add_rolling_average,
 )
@@ -271,6 +272,33 @@ def monthly_data(daily_df, min_hours):
     )
 
 
+def yearly_data(daily_df, min_hours):
+    result = yearly_average_daily_traffic(
+        daily_df,
+        min_hours_per_day=min_hours,
+    )
+
+    if result.empty:
+        return result
+
+    result = result.copy()
+    result["year"] = pd.to_datetime(result["year"])
+
+    full_years = pd.date_range(
+        result["year"].min(),
+        result["year"].max(),
+        freq="YS",
+    )
+
+    return (
+        result
+        .set_index("year")
+        .reindex(full_years)
+        .rename_axis("year")
+        .reset_index()
+    )
+
+
 def hourly_with_gaps(hourly_df):
     if hourly_df.empty:
         return hourly_df.copy()
@@ -419,6 +447,25 @@ def add_view(
                     mode="lines+markers",
                     name=street,
                     connectgaps=False,
+                    customdata=data[
+                        [
+                            "sum_valid_traffic",
+                            "valid_days",
+                            "avg_uptime",
+                        ]
+                    ],
+                    hovertemplate=(
+                        "<b>%{x|Week %V · %Y}</b><br>"
+                        "Gemiddeld per geldige dag: "
+                        "%{y:,.0f}<br>"
+                        "Som over geldige dagen: "
+                        "%{customdata[0]:,.0f}<br>"
+                        "Geldige dagen: "
+                        "%{customdata[1]:.0f}<br>"
+                        "Gem. uptime: "
+                        "%{customdata[2]:.0%}"
+                        "<extra></extra>"
+                    ),
                     line=dict(
                         color=street_color,
                         width=2,
@@ -451,12 +498,87 @@ def add_view(
                     mode="lines+markers",
                     name=street,
                     connectgaps=False,
+                    customdata=data[
+                        [
+                            "sum_valid_traffic",
+                            "valid_days",
+                            "avg_uptime",
+                        ]
+                    ],
+                    hovertemplate=(
+                        "<b>%{x|%B %Y}</b><br>"
+                        "Gemiddeld per geldige dag: "
+                        "%{y:,.0f}<br>"
+                        "Som over geldige dagen: "
+                        "%{customdata[0]:,.0f}<br>"
+                        "Geldige dagen: "
+                        "%{customdata[1]:.0f}<br>"
+                        "Gem. uptime: "
+                        "%{customdata[2]:.0%}"
+                        "<extra></extra>"
+                    ),
                     line=dict(
                         color=street_color,
                         width=2,
                     ),
                     marker=dict(
                         size=6,
+                        color=street_color,
+                    ),
+                ),
+                row=row,
+                col=1,
+            )
+
+        return (
+            f"Gemiddeld {label.lower()} "
+            f"per geldige dag"
+        )
+
+    if view == "Per jaar":
+        data = yearly_data(
+            daily,
+            min_hours,
+        )
+
+        if not data.empty:
+            fig.add_trace(
+                go.Scatter(
+                    x=data["year"],
+                    y=data["avg_daily_traffic"],
+                    mode="lines+markers",
+                    name=street,
+                    connectgaps=False,
+                    customdata=data[
+                        [
+                            "sum_valid_traffic",
+                            "valid_days",
+                            "calendar_days",
+                            "coverage",
+                            "avg_uptime",
+                        ]
+                    ],
+                    hovertemplate=(
+                        "<b>%{x|%Y}</b><br>"
+                        "Gemiddeld per geldige dag: "
+                        "%{y:,.0f}<br>"
+                        "Som over geldige dagen: "
+                        "%{customdata[0]:,.0f}<br>"
+                        "Geldige dagen: "
+                        "%{customdata[1]:.0f} / "
+                        "%{customdata[2]:.0f}<br>"
+                        "Dekking: "
+                        "%{customdata[3]:.1%}<br>"
+                        "Gem. uptime: "
+                        "%{customdata[4]:.0%}"
+                        "<extra></extra>"
+                    ),
+                    line=dict(
+                        color=street_color,
+                        width=2.4,
+                    ),
+                    marker=dict(
+                        size=8,
                         color=street_color,
                     ),
                 ),
@@ -743,6 +865,11 @@ uptime_pct = st.sidebar.slider(
     max_value=100,
     value=50,
     step=5,
+    help=(
+        "Telraam corrigeert de uurwaarde al voor de effectieve "
+        "teltijd (uptime). StraatVizier corrigeert niet opnieuw. "
+        "Uren onder deze grens worden volledig uitgesloten."
+    ),
 )
 
 min_uptime = uptime_pct / 100
@@ -759,6 +886,11 @@ min_hours = st.sidebar.slider(
     value=min(
         8,
         max_hours,
+    ),
+    help=(
+        "Een kalenderdag wordt alleen meegenomen in dag-, week-, "
+        "maand- en jaaranalyses als minstens dit aantal meeturen "
+        "de gekozen uptimegrens haalt."
     ),
 )
 
@@ -1128,6 +1260,7 @@ views = [
     "Per dag",
     "Per week",
     "Per maand",
+    "Per jaar",
     "24u-profiel",
     "Weekprofiel",
     "Jaarprofiel",
@@ -1282,6 +1415,7 @@ fig = make_subplots(
             "Per dag",
             "Per week",
             "Per maand",
+            "Per jaar",
         }
     ),
     vertical_spacing=(
@@ -1478,6 +1612,7 @@ if (
         "Per dag",
         "Per week",
         "Per maand",
+        "Per jaar",
     }
 ):
     fig.update_xaxes(
@@ -1539,6 +1674,35 @@ quality = monthly_average_daily_traffic(
 )
 
 st.divider()
+
+with st.expander(
+    "ⓘ Hoe worden de verkeerscijfers berekend?"
+):
+    st.markdown(
+        f"""
+**Uptime en verkeerscijfers**
+
+Telraam corrigeert de verkeerswaarde van elk meetuur al voor de
+effectieve teltijd (*uptime*). StraatVizier voert daarom geen tweede
+uptimecorrectie uit.
+
+- Uren met minder dan **{uptime_pct}% uptime** worden met de huidige
+  filters volledig uitgesloten.
+- Een dag wordt alleen als geldige dag meegenomen wanneer minstens
+  **{min_hours} geldige meeturen** beschikbaar zijn binnen
+  **{start_hour:02d}:00–{end_hour:02d}:00**.
+- Ontbrekende of uitgesloten uren en dagen worden niet aangevuld,
+  geïnterpoleerd of naar een volledige periode geëxtrapoleerd.
+- Week-, maand- en jaargemiddelden zijn gemiddelden over de geldige
+  dagen in die periode.
+- **Som over geldige dagen** is alleen de som van de beschikbare
+  geldige dagwaarden. Bij ontbrekende dagen is dit dus geen volledig
+  kalenderweek-, kalendermaand- of kalenderjaartotaal.
+
+De datakwaliteit hieronder helpt om de dekking van de gekozen periode
+te beoordelen.
+        """
+    )
 
 st.subheader(
     f"Datakwaliteit per maand — {selected_street}"

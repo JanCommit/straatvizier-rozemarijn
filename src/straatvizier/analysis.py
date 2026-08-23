@@ -160,6 +160,7 @@ def weekly_average_daily_traffic(
             columns=[
                 "week",
                 "avg_daily_traffic",
+                "sum_valid_traffic",
                 "valid_days",
                 "avg_uptime",
             ]
@@ -174,6 +175,7 @@ def weekly_average_daily_traffic(
             columns=[
                 "week",
                 "avg_daily_traffic",
+                "sum_valid_traffic",
                 "valid_days",
                 "avg_uptime",
             ]
@@ -190,6 +192,7 @@ def weekly_average_daily_traffic(
         .groupby("week", as_index=False)
         .agg(
             avg_daily_traffic=("value", "mean"),
+            sum_valid_traffic=("value", "sum"),
             valid_days=("date", "count"),
             avg_uptime=("avg_uptime", "mean"),
         )
@@ -213,6 +216,7 @@ def monthly_average_daily_traffic(
             columns=[
                 "month",
                 "avg_daily_traffic",
+                "sum_valid_traffic",
                 "valid_days",
                 "avg_uptime",
             ]
@@ -227,6 +231,7 @@ def monthly_average_daily_traffic(
             columns=[
                 "month",
                 "avg_daily_traffic",
+                "sum_valid_traffic",
                 "valid_days",
                 "avg_uptime",
             ]
@@ -243,12 +248,73 @@ def monthly_average_daily_traffic(
         .groupby("month", as_index=False)
         .agg(
             avg_daily_traffic=("value", "mean"),
+            sum_valid_traffic=("value", "sum"),
             valid_days=("date", "count"),
             avg_uptime=("avg_uptime", "mean"),
         )
     )
 
     return result
+
+def yearly_average_daily_traffic(
+    daily_df: pd.DataFrame,
+    min_hours_per_day: int = 8,
+) -> pd.DataFrame:
+    """
+    Bereken gemiddeld dagelijks verkeer per kalenderjaar.
+
+    Dagen met onvoldoende geldige meeturen worden uitgesloten.
+    De som is uitsluitend de som over geldige dagen en is dus
+    niet noodzakelijk een volledig kalenderjaartotaal.
+    """
+
+    columns = [
+        "year",
+        "avg_daily_traffic",
+        "sum_valid_traffic",
+        "valid_days",
+        "calendar_days",
+        "coverage",
+        "avg_uptime",
+    ]
+
+    if daily_df.empty:
+        return pd.DataFrame(columns=columns)
+
+    valid_days = daily_df[
+        daily_df["hours"] >= min_hours_per_day
+    ].copy()
+
+    if valid_days.empty:
+        return pd.DataFrame(columns=columns)
+
+    valid_days["year_number"] = valid_days["date"].dt.year
+    valid_days["year"] = pd.to_datetime(
+        valid_days["year_number"].astype(str) + "-01-01"
+    )
+
+    result = (
+        valid_days
+        .groupby(["year", "year_number"], as_index=False)
+        .agg(
+            avg_daily_traffic=("value", "mean"),
+            sum_valid_traffic=("value", "sum"),
+            valid_days=("date", "count"),
+            avg_uptime=("avg_uptime", "mean"),
+        )
+    )
+
+    result["calendar_days"] = result["year_number"].map(
+        lambda year: 366 if pd.Timestamp(
+            year=year, month=12, day=31
+        ).is_leap_year else 365
+    )
+    result["coverage"] = (
+        result["valid_days"] / result["calendar_days"]
+    )
+
+    return result.drop(columns=["year_number"])
+
 
 def add_missing_days_as_gaps(
     daily_df: pd.DataFrame,
