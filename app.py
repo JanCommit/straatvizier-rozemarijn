@@ -19,7 +19,7 @@ IVORY = "#F4F1E8"
 SAGE = "#C7D0C2"
 
 LOCAL_TIMEZONE = "Europe/Brussels"
-APP_VERSION = "0.8.0"
+APP_VERSION = "0.8.3"
 
 PROJECT_ROOT = Path(__file__).resolve().parent
 SRC_DIR = PROJECT_ROOT / "src"
@@ -1340,14 +1340,69 @@ period_max = max(
     if date is not None
 )
 
-selected_dates = st.sidebar.date_input(
-    "Periode",
-    value=(
+# De datumwidget is een "conceptperiode". De grafieken gebruiken pas
+# de toegepaste periode nadat de gebruiker expliciet op de knop klikt.
+period_signature = (
+    selected_street,
+    comparison_street if compare else None,
+    period_min,
+    period_max,
+)
+
+if st.session_state.get("period_signature") != period_signature:
+    st.session_state["period_signature"] = period_signature
+    st.session_state["selected_period"] = (
         period_min,
         period_max,
-    ),
+    )
+    st.session_state["applied_period"] = (
+        period_min,
+        period_max,
+    )
+
+
+def apply_selected_period():
+    selected = st.session_state.get(
+        "selected_period",
+        (period_min, period_max),
+    )
+    if isinstance(selected, (tuple, list)) and len(selected) == 2:
+        st.session_state["applied_period"] = tuple(selected)
+
+
+def reset_selected_period():
+    full_period = (
+        period_min,
+        period_max,
+    )
+    st.session_state["selected_period"] = full_period
+    st.session_state["applied_period"] = full_period
+
+
+st.sidebar.date_input(
+    "Periode",
     min_value=period_min,
     max_value=period_max,
+    key="selected_period",
+)
+
+apply_col, reset_col = st.sidebar.columns(2)
+
+apply_col.button(
+    "Periode toepassen",
+    use_container_width=True,
+    on_click=apply_selected_period,
+)
+
+reset_col.button(
+    "Reset periode",
+    use_container_width=True,
+    on_click=reset_selected_period,
+)
+
+selected_dates = st.session_state.get(
+    "applied_period",
+    (period_min, period_max),
 )
 
 if (
