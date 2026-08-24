@@ -5,6 +5,7 @@ import pandas as pd
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import streamlit as st
+import yaml
 
 UI_PRIMARY = "#2E6F8E"
 MAIN_STREET_COLOR = "#1E88E5"
@@ -18,7 +19,7 @@ IVORY = "#F4F1E8"
 SAGE = "#C7D0C2"
 
 LOCAL_TIMEZONE = "Europe/Brussels"
-APP_VERSION = "0.6.0"
+APP_VERSION = "0.7.0"
 
 PROJECT_ROOT = Path(__file__).resolve().parent
 SRC_DIR = PROJECT_ROOT / "src"
@@ -82,6 +83,7 @@ def cached_get_daily(
     start_hour: int,
     end_hour: int,
     min_uptime: float,
+    direction: str,
     include_car: bool,
     include_bike: bool,
     include_heavy: bool,
@@ -94,6 +96,7 @@ def cached_get_daily(
         start_hour=start_hour,
         end_hour=end_hour,
         min_uptime=min_uptime,
+        direction=direction,
         include_car=include_car,
         include_bike=include_bike,
         include_heavy=include_heavy,
@@ -112,6 +115,7 @@ def cached_get_hourly(
     start_hour: int,
     end_hour: int,
     min_uptime: float,
+    direction: str,
     include_car: bool,
     include_bike: bool,
     include_heavy: bool,
@@ -124,6 +128,7 @@ def cached_get_hourly(
         start_hour=start_hour,
         end_hour=end_hour,
         min_uptime=min_uptime,
+        direction=direction,
         include_car=include_car,
         include_bike=include_bike,
         include_heavy=include_heavy,
@@ -142,6 +147,7 @@ def cached_get_hour_profile(
     start_hour: int,
     end_hour: int,
     min_uptime: float,
+    direction: str,
     include_car: bool,
     include_bike: bool,
     include_heavy: bool,
@@ -154,6 +160,7 @@ def cached_get_hour_profile(
         start_hour=start_hour,
         end_hour=end_hour,
         min_uptime=min_uptime,
+        direction=direction,
         include_car=include_car,
         include_bike=include_bike,
         include_heavy=include_heavy,
@@ -164,6 +171,52 @@ def cached_get_hour_profile(
 # ============================================================
 # Helpers
 # ============================================================
+
+def load_direction_config():
+    config_path = PROJECT_ROOT / "config" / "segments.yaml"
+
+    if not config_path.exists():
+        return {}
+
+    with config_path.open("r", encoding="utf-8") as handle:
+        raw = yaml.safe_load(handle) or {}
+
+    return {
+        item["street"]: {
+            "ab": item.get("direction_ab_label", "A → B"),
+            "ba": item.get("direction_ba_label", "B → A"),
+        }
+        for item in raw.get("segments", [])
+    }
+
+
+DIRECTION_CONFIG = load_direction_config()
+
+
+def direction_label(street, direction):
+    labels = DIRECTION_CONFIG.get(street, {})
+
+    if direction == "ab":
+        return f'{labels.get("ab", "A → B")} (A → B)'
+
+    if direction == "ba":
+        return f'{labels.get("ba", "B → A")} (B → A)'
+
+    return "Beide richtingen"
+
+
+def requested_directions(direction_choice):
+    if direction_choice == "Richtingen apart tonen":
+        return ["ab", "ba"]
+
+    if direction_choice == "A → B":
+        return ["ab"]
+
+    if direction_choice == "B → A":
+        return ["ba"]
+
+    return ["both"]
+
 
 def traffic_label_for(labels):
     modes = [MODES[label] for label in labels]
@@ -344,6 +397,8 @@ def add_view(
     hourly=None,
     hour_profile=None,
     is_comparison=False,
+    series_suffix=None,
+    line_dash="solid",
 ):
     street_color = (
         COMPARE_STREET_COLOR
@@ -370,11 +425,12 @@ def add_view(
                     x=data["measured_at_local"],
                     y=data["selected_traffic"],
                     mode="lines",
-                    name=street,
+                    name=(f"{street} · {series_suffix}" if series_suffix else street),
                     connectgaps=False,
                     line=dict(
                         color=street_color,
                         width=1.6,
+                        dash=line_dash,
                     ),
                 ),
                 row=row,
@@ -394,11 +450,12 @@ def add_view(
                     x=data["date"],
                     y=data["value"],
                     mode="lines",
-                    name=f"{street} — dagelijks",
+                    name=(f"{street} · {series_suffix} — dagelijks" if series_suffix else f"{street} — dagelijks"),
                     connectgaps=False,
                     line=dict(
                         color=street_color,
                         width=1.5,
+                        dash=line_dash,
                     ),
                     opacity=0.68,
                 ),
@@ -418,13 +475,15 @@ def add_view(
                         y=trend["rolling_average"],
                         mode="lines",
                         name=(
-                            f"{street} — "
-                            f"{rolling_days}-daags gemiddelde"
+                            f"{street}"
+                            + (f" · {series_suffix}" if series_suffix else "")
+                            + f" — {rolling_days}-daags gemiddelde"
                         ),
                         connectgaps=False,
                         line=dict(
                             color=trend_color,
                             width=3.2,
+                            dash=line_dash,
                         ),
                     ),
                     row=row,
@@ -445,7 +504,7 @@ def add_view(
                     x=data["week"],
                     y=data["avg_daily_traffic"],
                     mode="lines+markers",
-                    name=street,
+                    name=(f"{street} · {series_suffix}" if series_suffix else street),
                     connectgaps=False,
                     customdata=data[
                         [
@@ -469,6 +528,7 @@ def add_view(
                     line=dict(
                         color=street_color,
                         width=2,
+                        dash=line_dash,
                     ),
                     marker=dict(
                         size=5,
@@ -496,7 +556,7 @@ def add_view(
                     x=data["month"],
                     y=data["avg_daily_traffic"],
                     mode="lines+markers",
-                    name=street,
+                    name=(f"{street} · {series_suffix}" if series_suffix else street),
                     connectgaps=False,
                     customdata=data[
                         [
@@ -520,6 +580,7 @@ def add_view(
                     line=dict(
                         color=street_color,
                         width=2,
+                        dash=line_dash,
                     ),
                     marker=dict(
                         size=6,
@@ -547,7 +608,7 @@ def add_view(
                     x=data["year"],
                     y=data["avg_daily_traffic"],
                     mode="lines+markers",
-                    name=street,
+                    name=(f"{street} · {series_suffix}" if series_suffix else street),
                     connectgaps=False,
                     customdata=data[
                         [
@@ -576,6 +637,7 @@ def add_view(
                     line=dict(
                         color=street_color,
                         width=2.4,
+                        dash=line_dash,
                     ),
                     marker=dict(
                         size=8,
@@ -604,10 +666,11 @@ def add_view(
                     x=data["hour"],
                     y=data["avg_traffic"],
                     mode="lines+markers",
-                    name=street,
+                    name=(f"{street} · {series_suffix}" if series_suffix else street),
                     line=dict(
                         color=street_color,
                         width=2.5,
+                        dash=line_dash,
                     ),
                     marker=dict(
                         color=street_color,
@@ -649,10 +712,11 @@ def add_view(
                     x=data["weekday"],
                     y=data["avg"],
                     mode="lines+markers",
-                    name=street,
+                    name=(f"{street} · {series_suffix}" if series_suffix else street),
                     line=dict(
                         color=street_color,
                         width=2.5,
+                        dash=line_dash,
                     ),
                     marker=dict(
                         color=street_color,
@@ -706,7 +770,7 @@ def add_view(
                 x=data["month_number"],
                 y=data["avg"],
                 mode="lines+markers",
-                name=street,
+                name=(f"{street} · {series_suffix}" if series_suffix else street),
                 line=dict(
                     color=street_color,
                     width=2.5,
@@ -839,6 +903,49 @@ selected_modes = [
 traffic_label = traffic_label_for(
     mode_labels
 )
+
+direction_choice = st.sidebar.radio(
+    "Richting",
+    [
+        "Beide richtingen",
+        "A → B",
+        "B → A",
+        "Richtingen apart tonen",
+    ],
+    index=0,
+    help=(
+        "Telraam-segmentdata gebruiken een vaste oriëntatie: "
+        "A → B komt overeen met de opgeslagen *_left-waarden en "
+        "B → A met *_right. StraatVizier toont per straat ook "
+        "een herkenbaar geografisch label."
+    ),
+)
+
+directions = requested_directions(direction_choice)
+
+if direction_choice in {"A → B", "B → A"}:
+    code = "ab" if direction_choice == "A → B" else "ba"
+    st.sidebar.caption(
+        f"{selected_street}: {direction_label(selected_street, code)}"
+    )
+    if compare:
+        st.sidebar.caption(
+            f"{comparison_street}: "
+            f"{direction_label(comparison_street, code)}"
+        )
+
+if direction_choice == "Richtingen apart tonen":
+    st.sidebar.caption(
+        f"{selected_street}: "
+        f"{direction_label(selected_street, 'ab')} · "
+        f"{direction_label(selected_street, 'ba')}"
+    )
+    if compare:
+        st.sidebar.caption(
+            f"{comparison_street}: "
+            f"{direction_label(comparison_street, 'ab')} · "
+            f"{direction_label(comparison_street, 'ba')}"
+        )
 
 start_hour, end_hour = st.sidebar.slider(
     "Uren",
@@ -1046,46 +1153,62 @@ flags = mode_flags(
 # Dagelijkse aggregaten: altijd lichtgewicht
 # ============================================================
 
+daily_main_by_direction = {}
+daily_compare_by_direction = {}
+
 with st.spinner(
     "Verkeersgegevens verwerken..."
 ):
-    daily_main = cached_get_daily(
-        segment_id=main_id,
-        start_date=start_date.isoformat(),
-        end_date=end_date.isoformat(),
-        start_hour=start_hour,
-        end_hour=end_hour,
-        min_uptime=min_uptime,
-        **flags,
-    )
-
-daily_compare = None
-
-if compare:
-    with st.spinner(
-        "Vergelijkingsgegevens verwerken..."
-    ):
-        daily_compare = cached_get_daily(
-            segment_id=comparison_id,
+    for direction in directions:
+        daily_main_by_direction[direction] = cached_get_daily(
+            segment_id=main_id,
             start_date=start_date.isoformat(),
             end_date=end_date.isoformat(),
             start_hour=start_hour,
             end_hour=end_hour,
             min_uptime=min_uptime,
+            direction=direction,
             **flags,
         )
 
+if compare:
+    with st.spinner(
+        "Vergelijkingsgegevens verwerken..."
+    ):
+        for direction in directions:
+            daily_compare_by_direction[direction] = cached_get_daily(
+                segment_id=comparison_id,
+                start_date=start_date.isoformat(),
+                end_date=end_date.isoformat(),
+                start_hour=start_hour,
+                end_hour=end_hour,
+                min_uptime=min_uptime,
+                direction=direction,
+                **flags,
+            )
 
-valid_main = valid_daily(
-    daily_main,
-    min_hours,
+# Voor header en datakwaliteit gebruiken we bij een opgesplitste
+# weergave de A→B-reeks; uptime/uren zijn identiek voor beide richtingen.
+header_direction = directions[0]
+daily_main = daily_main_by_direction[header_direction]
+daily_compare = (
+    daily_compare_by_direction[header_direction]
+    if compare
+    else None
 )
 
+valid_main_by_direction = {
+    direction: valid_daily(data, min_hours)
+    for direction, data in daily_main_by_direction.items()
+}
+valid_compare_by_direction = {
+    direction: valid_daily(data, min_hours)
+    for direction, data in daily_compare_by_direction.items()
+}
+
+valid_main = valid_main_by_direction[header_direction]
 valid_compare = (
-    valid_daily(
-        daily_compare,
-        min_hours,
-    )
+    valid_compare_by_direction[header_direction]
     if compare
     else None
 )
@@ -1200,6 +1323,7 @@ st.html(
             {start_hour:02d}:00–{end_hour:02d}:00
             · minimum uptime {uptime_pct}%
             · minimum {min_hours} geldige uren per dag
+            · {direction_choice}
             {comparison_note}
         </div>
 
@@ -1311,11 +1435,10 @@ if view == "Per dag":
 # Lazy loading zware weergaven
 # ============================================================
 
-hourly_main = None
-hourly_compare = None
-
-hour_profile_main = None
-hour_profile_compare = None
+hourly_main_by_direction = {}
+hourly_compare_by_direction = {}
+hour_profile_main_by_direction = {}
+hour_profile_compare_by_direction = {}
 
 if view == "Per uur":
     st.caption(
@@ -1324,65 +1447,61 @@ if view == "Per uur":
         "het laden iets langer duren."
     )
 
-    with st.spinner(
-        "Uurgegevens laden..."
-    ):
-        hourly_main = cached_get_hourly(
-            segment_id=main_id,
-            start_date=start_date.isoformat(),
-            end_date=end_date.isoformat(),
-            start_hour=start_hour,
-            end_hour=end_hour,
-            min_uptime=min_uptime,
-            **flags,
-        )
-
-    if compare:
-        with st.spinner(
-            "Uurgegevens vergelijkingsstraat laden..."
-        ):
-            hourly_compare = cached_get_hourly(
-                segment_id=comparison_id,
-                start_date=start_date.isoformat(),
-                end_date=end_date.isoformat(),
-                start_hour=start_hour,
-                end_hour=end_hour,
-                min_uptime=min_uptime,
-                **flags,
-            )
-
-
-if view == "24u-profiel":
-    with st.spinner(
-        "24u-profiel berekenen..."
-    ):
-        hour_profile_main = (
-            cached_get_hour_profile(
+    with st.spinner("Uurgegevens laden..."):
+        for direction in directions:
+            hourly_main_by_direction[direction] = cached_get_hourly(
                 segment_id=main_id,
                 start_date=start_date.isoformat(),
                 end_date=end_date.isoformat(),
                 start_hour=start_hour,
                 end_hour=end_hour,
                 min_uptime=min_uptime,
+                direction=direction,
                 **flags,
             )
-        )
 
     if compare:
-        with st.spinner(
-            "24u-profiel vergelijkingsstraat berekenen..."
-        ):
-            hour_profile_compare = (
-                cached_get_hour_profile(
+        with st.spinner("Uurgegevens vergelijkingsstraat laden..."):
+            for direction in directions:
+                hourly_compare_by_direction[direction] = cached_get_hourly(
                     segment_id=comparison_id,
                     start_date=start_date.isoformat(),
                     end_date=end_date.isoformat(),
                     start_hour=start_hour,
                     end_hour=end_hour,
                     min_uptime=min_uptime,
+                    direction=direction,
                     **flags,
                 )
+
+
+if view == "24u-profiel":
+    with st.spinner("24u-profiel berekenen..."):
+        for direction in directions:
+            hour_profile_main_by_direction[direction] = cached_get_hour_profile(
+                segment_id=main_id,
+                start_date=start_date.isoformat(),
+                end_date=end_date.isoformat(),
+                start_hour=start_hour,
+                end_hour=end_hour,
+                min_uptime=min_uptime,
+                direction=direction,
+                **flags,
             )
+
+    if compare:
+        with st.spinner("24u-profiel vergelijkingsstraat berekenen..."):
+            for direction in directions:
+                hour_profile_compare_by_direction[direction] = cached_get_hour_profile(
+                    segment_id=comparison_id,
+                    start_date=start_date.isoformat(),
+                    end_date=end_date.isoformat(),
+                    start_hour=start_hour,
+                    end_hour=end_hour,
+                    min_uptime=min_uptime,
+                    direction=direction,
+                    **flags,
+                )
 
 
 # ============================================================
@@ -1433,41 +1552,71 @@ fig = make_subplots(
     ),
 )
 
-y_label = add_view(
-    fig=fig,
-    row=1,
-    view=view,
-    street=selected_street,
-    daily=daily_main,
-    valid=valid_main,
-    label=traffic_label,
-    min_hours=min_hours,
-    rolling_days=rolling_days,
-    show_rolling=show_rolling,
-    hourly=hourly_main,
-    hour_profile=hour_profile_main,
-)
+y_label = None
 
-if compare:
-    add_view(
+for direction in directions:
+    split = len(directions) > 1
+    suffix = (
+        direction_label(selected_street, direction)
+        if split
+        else (
+            direction_label(selected_street, direction)
+            if direction != "both"
+            else None
+        )
+    )
+    dash = "solid" if direction in {"both", "ab"} else "dash"
+
+    current_label = add_view(
         fig=fig,
-        row=(
-            1
-            if comparison_overlay
-            else 2
-        ),
+        row=1,
         view=view,
-        street=comparison_street,
-        daily=daily_compare,
-        valid=valid_compare,
+        street=selected_street,
+        daily=daily_main_by_direction[direction],
+        valid=valid_main_by_direction[direction],
         label=traffic_label,
         min_hours=min_hours,
         rolling_days=rolling_days,
         show_rolling=show_rolling,
-        hourly=hourly_compare,
-        hour_profile=hour_profile_compare,
-        is_comparison=True,
+        hourly=hourly_main_by_direction.get(direction),
+        hour_profile=hour_profile_main_by_direction.get(direction),
+        series_suffix=suffix,
+        line_dash=dash,
     )
+
+    y_label = y_label or current_label
+
+if compare:
+    for direction in directions:
+        split = len(directions) > 1
+        suffix = (
+            direction_label(comparison_street, direction)
+            if split
+            else (
+                direction_label(comparison_street, direction)
+                if direction != "both"
+                else None
+            )
+        )
+        dash = "solid" if direction in {"both", "ab"} else "dash"
+
+        add_view(
+            fig=fig,
+            row=(1 if comparison_overlay else 2),
+            view=view,
+            street=comparison_street,
+            daily=daily_compare_by_direction[direction],
+            valid=valid_compare_by_direction[direction],
+            label=traffic_label,
+            min_hours=min_hours,
+            rolling_days=rolling_days,
+            show_rolling=show_rolling,
+            hourly=hourly_compare_by_direction.get(direction),
+            hour_profile=hour_profile_compare_by_direction.get(direction),
+            is_comparison=True,
+            series_suffix=suffix,
+            line_dash=dash,
+        )
 
 
 # Forceer de secundaire y-assen om zichtbaar te worden.
@@ -1698,6 +1847,16 @@ uptimecorrectie uit.
 - **Som over geldige dagen** is alleen de som van de beschikbare
   geldige dagwaarden. Bij ontbrekende dagen is dit dus geen volledig
   kalenderweek-, kalendermaand- of kalenderjaartotaal.
+
+**Richtingen**
+
+Voor segmentdata geldt bij Telraam steeds **A → B = left** en
+**B → A = right**. StraatVizier gebruikt die vaste segmentoriëntatie
+en toont daarnaast per straat een herkenbaar geografisch richtingslabel.
+
+Bij straten met tramverkeer kan Telraam trams als **zwaar verkeer**
+classificeren. Een richtingswaarde voor zwaar verkeer is daarom niet
+automatisch uitsluitend vrachtverkeer.
 
 De datakwaliteit hieronder helpt om de dekking van de gekozen periode
 te beoordelen.
