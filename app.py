@@ -19,7 +19,7 @@ IVORY = "#F4F1E8"
 SAGE = "#C7D0C2"
 
 LOCAL_TIMEZONE = "Europe/Brussels"
-APP_VERSION = "0.8.4"
+APP_VERSION = "0.8.5"
 
 PROJECT_ROOT = Path(__file__).resolve().parent
 SRC_DIR = PROJECT_ROOT / "src"
@@ -2123,7 +2123,7 @@ view = view or "Per dag"
 
 # Rolling controls: compact
 show_rolling = False
-rolling_days = 30
+rolling_days = 31
 
 if view == "Per dag":
     col_roll, col_window, col_space = st.columns(
@@ -2141,8 +2141,8 @@ if view == "Per dag":
             "Venster",
             [
                 7,
-                30,
-                90,
+                31,
+                91,
             ],
             index=1,
             format_func=lambda value:

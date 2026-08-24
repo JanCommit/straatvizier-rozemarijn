@@ -356,7 +356,12 @@ def add_rolling_average(
     window_days: int = 30,
 ) -> pd.DataFrame:
     """
-    Bereken een voortschrijdend gemiddelde over kalenderdagen.
+    Bereken een gecentreerd voortschrijdend gemiddelde over kalenderdagen.
+
+    Bij een oneven venster ligt de weergegeven datum exact in het midden:
+    7 dagen = 3 ervoor + huidige dag + 3 erna,
+    31 dagen = 15 ervoor + huidige dag + 15 erna,
+    91 dagen = 45 ervoor + huidige dag + 45 erna.
 
     Ontbrekende dagen blijven NaN.
     Bij lange datagaten wordt de trendlijn onderbroken.
@@ -386,6 +391,7 @@ def add_rolling_average(
         .rolling(
             window=window_days,
             min_periods=min_periods,
+            center=True,
         )
         .mean()
     )
