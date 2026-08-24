@@ -19,7 +19,7 @@ IVORY = "#F4F1E8"
 SAGE = "#C7D0C2"
 
 LOCAL_TIMEZONE = "Europe/Brussels"
-APP_VERSION = "0.8.3"
+APP_VERSION = "0.8.4"
 
 PROJECT_ROOT = Path(__file__).resolve().parent
 SRC_DIR = PROJECT_ROOT / "src"
@@ -280,6 +280,7 @@ def add_speed_traces(
             x=data["x"],
             y=data["v50"],
             mode="lines+markers",
+            connectgaps=False,
             name=f"{street} V50",
             line=dict(
                 color=base,
@@ -306,6 +307,7 @@ def add_speed_traces(
             x=data["x"],
             y=data["v85"],
             mode="lines+markers",
+            connectgaps=False,
             name=f"{street} V85",
             line=dict(
                 color=trend,
@@ -332,6 +334,7 @@ def add_speed_traces(
             x=data["x"],
             y=data["v95"],
             mode="lines+markers",
+            connectgaps=False,
             name=f"{street} V95",
             line=dict(
                 color=base,
@@ -1566,6 +1569,21 @@ if analysis_type == "Autosnelheid":
                     )
                 )
 
+                full_hours = pd.date_range(
+                    data["x"].min(),
+                    data["x"].max(),
+                    freq="h",
+                    tz=LOCAL_TIMEZONE,
+                )
+
+                data = (
+                    data
+                    .set_index("x")
+                    .reindex(full_hours)
+                    .rename_axis("x")
+                    .reset_index()
+                )
+
             return data
 
         if view_name == "Per dag":
@@ -1573,6 +1591,20 @@ if analysis_type == "Autosnelheid":
 
             if not data.empty:
                 data["x"] = data["date"]
+
+                full_days = pd.date_range(
+                    data["x"].min(),
+                    data["x"].max(),
+                    freq="D",
+                )
+
+                data = (
+                    data
+                    .set_index("x")
+                    .reindex(full_days)
+                    .rename_axis("x")
+                    .reset_index()
+                )
 
             return data
 
@@ -1594,6 +1626,26 @@ if analysis_type == "Autosnelheid":
 
             if not data.empty:
                 data["x"] = data[period]
+
+                freq = {
+                    "week": "W-MON",
+                    "month": "MS",
+                    "year": "YS",
+                }[period]
+
+                full_periods = pd.date_range(
+                    data["x"].min(),
+                    data["x"].max(),
+                    freq=freq,
+                )
+
+                data = (
+                    data
+                    .set_index("x")
+                    .reindex(full_periods)
+                    .rename_axis("x")
+                    .reset_index()
+                )
 
             return data
 
