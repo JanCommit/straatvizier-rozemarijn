@@ -19,7 +19,7 @@ IVORY = "#F4F1E8"
 SAGE = "#C7D0C2"
 
 LOCAL_TIMEZONE = "Europe/Brussels"
-APP_VERSION = "0.7.0"
+APP_VERSION = "0.8.0"
 
 PROJECT_ROOT = Path(__file__).resolve().parent
 SRC_DIR = PROJECT_ROOT / "src"
@@ -42,6 +42,12 @@ from straatvizier.database import (
     get_daily_traffic,
     get_hourly_traffic,
     get_hour_profile,
+    get_hourly_speed,
+    get_daily_speed,
+    aggregate_speed_period,
+    get_speed_hour_profile,
+    get_speed_week_profile,
+    get_speed_year_profile,
 )
 
 
@@ -165,6 +171,187 @@ def cached_get_hour_profile(
         include_bike=include_bike,
         include_heavy=include_heavy,
         include_pedestrian=include_pedestrian,
+    )
+
+
+
+@st.cache_data(
+    ttl=86400,
+    show_spinner=False,
+)
+def cached_get_hourly_speed(
+    segment_id,
+    start_date,
+    end_date,
+    start_hour,
+    end_hour,
+    min_uptime,
+):
+    return get_hourly_speed(
+        segment_id,
+        start_date,
+        end_date,
+        start_hour,
+        end_hour,
+        min_uptime,
+    )
+
+
+@st.cache_data(
+    ttl=86400,
+    show_spinner=False,
+)
+def cached_get_daily_speed(
+    segment_id,
+    start_date,
+    end_date,
+    start_hour,
+    end_hour,
+    min_uptime,
+):
+    return get_daily_speed(
+        segment_id,
+        start_date,
+        end_date,
+        start_hour,
+        end_hour,
+        min_uptime,
+    )
+
+
+@st.cache_data(
+    ttl=86400,
+    show_spinner=False,
+)
+def cached_get_speed_hour_profile(
+    segment_id,
+    start_date,
+    end_date,
+    start_hour,
+    end_hour,
+    min_uptime,
+):
+    return get_speed_hour_profile(
+        segment_id,
+        start_date,
+        end_date,
+        start_hour,
+        end_hour,
+        min_uptime,
+    )
+
+
+def valid_daily_speed(
+    df,
+    min_hours,
+):
+    if df.empty:
+        return df.copy()
+
+    return df[
+        df["hours"] >= min_hours
+    ].copy()
+
+
+def add_speed_traces(
+    fig,
+    row,
+    data,
+    street,
+    is_comparison=False,
+):
+    if data is None or data.empty:
+        return
+
+    base = (
+        COMPARE_STREET_COLOR
+        if is_comparison
+        else MAIN_STREET_COLOR
+    )
+
+    trend = (
+        COMPARE_TREND_COLOR
+        if is_comparison
+        else MAIN_TREND_COLOR
+    )
+
+    fig.add_trace(
+        go.Scatter(
+            x=data["x"],
+            y=data["v50"],
+            mode="lines+markers",
+            name=f"{street} V50",
+            line=dict(
+                color=base,
+                width=2,
+            ),
+            marker=dict(
+                size=4,
+                color=base,
+            ),
+            customdata=data[["cars"]],
+            hovertemplate=(
+                "V50: %{y:.1f} km/u<br>"
+                "Auto's in verdeling: "
+                "%{customdata[0]:,.0f}"
+                "<extra></extra>"
+            ),
+        ),
+        row=row,
+        col=1,
+    )
+
+    fig.add_trace(
+        go.Scatter(
+            x=data["x"],
+            y=data["v85"],
+            mode="lines+markers",
+            name=f"{street} V85",
+            line=dict(
+                color=trend,
+                width=2.8,
+            ),
+            marker=dict(
+                size=4,
+                color=trend,
+            ),
+            customdata=data[["cars"]],
+            hovertemplate=(
+                "V85: %{y:.1f} km/u<br>"
+                "Auto's in verdeling: "
+                "%{customdata[0]:,.0f}"
+                "<extra></extra>"
+            ),
+        ),
+        row=row,
+        col=1,
+    )
+
+    fig.add_trace(
+        go.Scatter(
+            x=data["x"],
+            y=data["v95"],
+            mode="lines+markers",
+            name=f"{street} V95",
+            line=dict(
+                color=base,
+                width=1.5,
+                dash="dash",
+            ),
+            marker=dict(
+                size=4,
+                color=base,
+            ),
+            customdata=data[["cars"]],
+            hovertemplate=(
+                "V95: %{y:.1f} km/u<br>"
+                "Auto's in verdeling: "
+                "%{customdata[0]:,.0f}"
+                "<extra></extra>"
+            ),
+        ),
+        row=row,
+        col=1,
     )
 
 
@@ -774,6 +961,7 @@ def add_view(
                 line=dict(
                     color=street_color,
                     width=2.5,
+                    dash=line_dash,
                 ),
                 marker=dict(
                     color=street_color,
@@ -880,72 +1068,104 @@ if compare:
         "Filters gelden voor beide straten."
     )
 
-mode_labels = st.sidebar.multiselect(
-    "Vervoersmiddelen",
-    list(MODES.keys()),
-    default=[
-        "Auto's",
-        "Zwaar verkeer",
-    ],
+analysis_type = st.sidebar.radio(
+    "Analyse",
+    ["Verkeersaantallen", "Autosnelheid"],
+    index=0,
 )
 
-if not mode_labels:
-    st.warning(
-        "Selecteer minstens één vervoersmiddel."
+if analysis_type == "Verkeersaantallen":
+    mode_labels = st.sidebar.multiselect(
+        "Vervoersmiddelen",
+        list(MODES.keys()),
+        default=[
+            "Auto's",
+            "Zwaar verkeer",
+        ],
     )
-    st.stop()
 
-selected_modes = [
-    MODES[label]
-    for label in mode_labels
-]
+    if not mode_labels:
+        st.warning(
+            "Selecteer minstens één vervoersmiddel."
+        )
+        st.stop()
 
-traffic_label = traffic_label_for(
-    mode_labels
-)
+    selected_modes = [
+        MODES[label]
+        for label in mode_labels
+    ]
 
-direction_choice = st.sidebar.radio(
-    "Richting",
-    [
-        "Beide richtingen",
+    traffic_label = traffic_label_for(
+        mode_labels
+    )
+
+    direction_choice = st.sidebar.radio(
+        "Richting",
+        [
+            "Beide richtingen",
+            "A → B",
+            "B → A",
+            "Richtingen apart tonen",
+        ],
+        index=0,
+        help=(
+            "Telraam-segmentdata gebruiken een vaste oriëntatie: "
+            "A → B komt overeen met de opgeslagen *_left-waarden en "
+            "B → A met *_right. StraatVizier toont per straat ook "
+            "een herkenbaar geografisch richtingslabel."
+        ),
+    )
+
+    directions = requested_directions(
+        direction_choice
+    )
+
+    if direction_choice in {
         "A → B",
         "B → A",
-        "Richtingen apart tonen",
-    ],
-    index=0,
-    help=(
-        "Telraam-segmentdata gebruiken een vaste oriëntatie: "
-        "A → B komt overeen met de opgeslagen *_left-waarden en "
-        "B → A met *_right. StraatVizier toont per straat ook "
-        "een herkenbaar geografisch label."
-    ),
-)
-
-directions = requested_directions(direction_choice)
-
-if direction_choice in {"A → B", "B → A"}:
-    code = "ab" if direction_choice == "A → B" else "ba"
-    st.sidebar.caption(
-        f"{selected_street}: {direction_label(selected_street, code)}"
-    )
-    if compare:
-        st.sidebar.caption(
-            f"{comparison_street}: "
-            f"{direction_label(comparison_street, code)}"
+    }:
+        code = (
+            "ab"
+            if direction_choice == "A → B"
+            else "ba"
         )
 
-if direction_choice == "Richtingen apart tonen":
-    st.sidebar.caption(
-        f"{selected_street}: "
-        f"{direction_label(selected_street, 'ab')} · "
-        f"{direction_label(selected_street, 'ba')}"
-    )
-    if compare:
         st.sidebar.caption(
-            f"{comparison_street}: "
-            f"{direction_label(comparison_street, 'ab')} · "
-            f"{direction_label(comparison_street, 'ba')}"
+            f"{selected_street}: "
+            f"{direction_label(selected_street, code)}"
         )
+
+        if compare:
+            st.sidebar.caption(
+                f"{comparison_street}: "
+                f"{direction_label(comparison_street, code)}"
+            )
+
+    if direction_choice == "Richtingen apart tonen":
+        st.sidebar.caption(
+            f"{selected_street}: "
+            f"{direction_label(selected_street, 'ab')} · "
+            f"{direction_label(selected_street, 'ba')}"
+        )
+
+        if compare:
+            st.sidebar.caption(
+                f"{comparison_street}: "
+                f"{direction_label(comparison_street, 'ab')} · "
+                f"{direction_label(comparison_street, 'ba')}"
+            )
+
+else:
+    mode_labels = ["Auto's"]
+    selected_modes = ["car"]
+    traffic_label = "Autosnelheid"
+    direction_choice = "Beide richtingen"
+    directions = ["both"]
+
+    st.sidebar.caption(
+        "Snelheid is alleen beschikbaar voor auto's "
+        "en niet per rijrichting."
+    )
 
 start_hour, end_hour = st.sidebar.slider(
     "Uren",
@@ -1147,6 +1367,399 @@ start_date, end_date = selected_dates
 flags = mode_flags(
     selected_modes
 )
+
+
+# ============================================================
+# Autosnelheid
+# ============================================================
+
+if analysis_type == "Autosnelheid":
+    st.header(
+        "Autosnelheid"
+    )
+
+    speed_views = [
+        "Per uur",
+        "Per dag",
+        "Per week",
+        "Per maand",
+        "Per jaar",
+        "24u-profiel",
+        "Weekprofiel",
+        "Jaarprofiel",
+    ]
+
+    speed_view = st.segmented_control(
+        "Weergave",
+        speed_views,
+        default="Per dag",
+        selection_mode="single",
+        label_visibility="collapsed",
+        key="speed_view",
+    ) or "Per dag"
+
+    # Dagelijkse histogrammen zijn compact en vormen de basis
+    # voor dag/week/maand/jaar en de profielweergaven.
+    with st.spinner(
+        "Snelheidsgegevens verwerken..."
+    ):
+        speed_daily_main = (
+            cached_get_daily_speed(
+                main_id,
+                start_date.isoformat(),
+                end_date.isoformat(),
+                start_hour,
+                end_hour,
+                min_uptime,
+            )
+        )
+
+        speed_daily_compare = (
+            cached_get_daily_speed(
+                comparison_id,
+                start_date.isoformat(),
+                end_date.isoformat(),
+                start_hour,
+                end_hour,
+                min_uptime,
+            )
+            if compare
+            else pd.DataFrame()
+        )
+
+    speed_hourly_main = pd.DataFrame()
+    speed_hourly_compare = pd.DataFrame()
+
+    speed_hour_profile_main = pd.DataFrame()
+    speed_hour_profile_compare = pd.DataFrame()
+
+    # De zware uurdata worden alleen opgehaald wanneer
+    # de gebruiker expliciet "Per uur" kiest.
+    if speed_view == "Per uur":
+        with st.spinner(
+            "Uurlijkse snelheidsgegevens laden..."
+        ):
+            speed_hourly_main = (
+                cached_get_hourly_speed(
+                    main_id,
+                    start_date.isoformat(),
+                    end_date.isoformat(),
+                    start_hour,
+                    end_hour,
+                    min_uptime,
+                )
+            )
+
+            if compare:
+                speed_hourly_compare = (
+                    cached_get_hourly_speed(
+                        comparison_id,
+                        start_date.isoformat(),
+                        end_date.isoformat(),
+                        start_hour,
+                        end_hour,
+                        min_uptime,
+                    )
+                )
+
+    if speed_view == "24u-profiel":
+        with st.spinner(
+            "24u-snelheidsprofiel berekenen..."
+        ):
+            speed_hour_profile_main = (
+                cached_get_speed_hour_profile(
+                    main_id,
+                    start_date.isoformat(),
+                    end_date.isoformat(),
+                    start_hour,
+                    end_hour,
+                    min_uptime,
+                )
+            )
+
+            if compare:
+                speed_hour_profile_compare = (
+                    cached_get_speed_hour_profile(
+                        comparison_id,
+                        start_date.isoformat(),
+                        end_date.isoformat(),
+                        start_hour,
+                        end_hour,
+                        min_uptime,
+                    )
+                )
+
+    def speed_view_data(
+        view_name,
+        hourly,
+        daily,
+        hour_profile,
+    ):
+        valid = valid_daily_speed(
+            daily,
+            min_hours,
+        )
+
+        if view_name == "Per uur":
+            data = hourly.copy()
+
+            if not data.empty:
+                data["x"] = (
+                    data["measured_at"]
+                    .dt.tz_convert(
+                        LOCAL_TIMEZONE
+                    )
+                )
+
+            return data
+
+        if view_name == "Per dag":
+            data = valid.copy()
+
+            if not data.empty:
+                data["x"] = data["date"]
+
+            return data
+
+        if view_name in {
+            "Per week",
+            "Per maand",
+            "Per jaar",
+        }:
+            period = {
+                "Per week": "week",
+                "Per maand": "month",
+                "Per jaar": "year",
+            }[view_name]
+
+            data = aggregate_speed_period(
+                valid,
+                period,
+            )
+
+            if not data.empty:
+                data["x"] = data[period]
+
+            return data
+
+        if view_name == "24u-profiel":
+            data = hour_profile.copy()
+
+            if not data.empty:
+                data["x"] = data["hour"]
+
+            return data
+
+        if view_name == "Weekprofiel":
+            data = get_speed_week_profile(
+                valid
+            )
+
+            if not data.empty:
+                data["x"] = data["weekday"]
+
+            return data
+
+        data = get_speed_year_profile(
+            valid
+        )
+
+        if not data.empty:
+            data["x"] = (
+                data["month_number"]
+            )
+
+        return data
+
+    main_speed_plot = speed_view_data(
+        speed_view,
+        speed_hourly_main,
+        speed_daily_main,
+        speed_hour_profile_main,
+    )
+
+    compare_speed_plot = (
+        speed_view_data(
+            speed_view,
+            speed_hourly_compare,
+            speed_daily_compare,
+            speed_hour_profile_compare,
+        )
+        if compare
+        else pd.DataFrame()
+    )
+
+    overlay = (
+        compare
+        and comparison_layout
+        == "Samen in één grafiek"
+    )
+
+    speed_rows = (
+        2
+        if compare and not overlay
+        else 1
+    )
+
+    speed_fig = make_subplots(
+        rows=speed_rows,
+        cols=1,
+        shared_xaxes=(
+            compare
+            and not overlay
+            and speed_view in {
+                "Per uur",
+                "Per dag",
+                "Per week",
+                "Per maand",
+                "Per jaar",
+            }
+        ),
+        vertical_spacing=(
+            .10
+            if speed_rows == 2
+            else 0
+        ),
+        subplot_titles=(
+            [
+                selected_street,
+                comparison_street,
+            ]
+            if speed_rows == 2
+            else None
+        ),
+    )
+
+    add_speed_traces(
+        speed_fig,
+        1,
+        main_speed_plot,
+        selected_street,
+    )
+
+    if compare:
+        add_speed_traces(
+            speed_fig,
+            1 if overlay else 2,
+            compare_speed_plot,
+            comparison_street,
+            True,
+        )
+
+    if speed_view == "24u-profiel":
+        speed_fig.update_xaxes(
+            dtick=1,
+        )
+
+    elif speed_view == "Weekprofiel":
+        speed_fig.update_xaxes(
+            tickmode="array",
+            tickvals=list(range(7)),
+            ticktext=[
+                "Ma",
+                "Di",
+                "Wo",
+                "Do",
+                "Vr",
+                "Za",
+                "Zo",
+            ],
+        )
+
+    elif speed_view == "Jaarprofiel":
+        speed_fig.update_xaxes(
+            tickmode="array",
+            tickvals=list(range(1, 13)),
+            ticktext=[
+                "Jan",
+                "Feb",
+                "Mrt",
+                "Apr",
+                "Mei",
+                "Jun",
+                "Jul",
+                "Aug",
+                "Sep",
+                "Okt",
+                "Nov",
+                "Dec",
+            ],
+        )
+
+    speed_fig.update_yaxes(
+        title_text=(
+            "Autosnelheid (km/u)"
+        ),
+        gridcolor=GRID_COLOR,
+        rangemode=(
+            "tozero"
+            if y_axis_from_zero
+            else "normal"
+        ),
+    )
+
+    speed_fig.update_layout(
+        height=(
+            720
+            if speed_rows == 2
+            else 520
+        ),
+        hovermode="x unified",
+        margin=dict(
+            t=(
+                45
+                if speed_rows == 2
+                else 20
+            ),
+            l=20,
+            r=30,
+            b=20,
+        ),
+    )
+
+    st.caption(
+        "V50 = mediaansnelheid · "
+        "V85 = snelheid waaronder 85% van de "
+        "waarnemingen valt · "
+        "V95 = 95e percentiel. "
+        "Snelheid geldt alleen voor auto's en "
+        "is niet per rijrichting beschikbaar."
+    )
+
+    st.plotly_chart(
+        speed_fig,
+        use_container_width=True,
+    )
+
+    st.divider()
+
+    with st.expander(
+        "ⓘ Hoe worden de snelheidsgegevens berekend?"
+    ):
+        st.markdown(
+            f"""
+De autosnelheid wordt afgeleid uit Telraams histogram met klassen van
+**5 km/u**: 0–5, 5–10, …, 115–120 en **120+ km/u**.
+
+Voor elke periode worden de histogrammen eerst gewogen met het aantal
+auto's in het betreffende uur en daarna samengevoegd. Een druk uur telt
+dus zwaarder mee dan een uur met weinig verkeer.
+
+StraatVizier berekent vervolgens **V50, V85 en V95** door lineair binnen
+de betreffende 5-km/u-klasse te interpoleren. De methode werd vergeleken
+met Telraams eigen V85 en kwam vrijwel exact overeen.
+
+Uren met minder dan **{uptime_pct}% uptime** worden uitgesloten.
+Voor dag- en langere aggregaties moet een dag minstens **{min_hours}**
+geldige uren hebben binnen **{start_hour:02d}:00–{end_hour:02d}:00**.
+
+Snelheidsmetingen zijn indicatief. Telraam berekent snelheid alleen voor
+objecten die als auto worden geclassificeerd; foutieve classificaties
+kunnen daarom ook de snelheidsverdeling beïnvloeden.
+            """
+        )
+
+    st.stop()
 
 
 # ============================================================
