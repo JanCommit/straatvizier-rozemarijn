@@ -3,31 +3,61 @@ segments:
   street: Rozemarijnstraat
   direction_ab_label: Stadinwaarts
   direction_ba_label: Staduitwaarts
+  sensor_history:
+  - sensor: S1
+    start: 09/04/2019
+    end: 31/03/2023
+  - sensor: S2
+    start: 01/04/2023
 - telraam_segment_id: 9000006048
   street: Bernard Spaelaan
   direction_ab_label: Stadinwaarts
   direction_ba_label: Staduitwaarts
+  sensor_history:
+  - sensor: S1
+    start: 20/11/2023
+    end: 30/05/2025
+  - sensor: S2
+    start: 06/06/2026
 - telraam_segment_id: 155401
   street: Coupure Links
   direction_ab_label: Richting Groene Vallei
   direction_ba_label: Richting Verlorenkost
+  sensor_history:
+  - sensor: S1
+    start: 26/11/2019
 - telraam_segment_id: 9000008840
   street: Papagaaistraat
   direction_ab_label: Stadinwaarts
   direction_ba_label: Staduitwaarts
+  sensor_history:
+  - sensor: S1
+    start: 30/05/2025
 - telraam_segment_id: 9000006262
   street: Wispelbergstraat
   direction_ab_label: Richting Theresianenstraat
   direction_ba_label: Richting Papegaaistraat
+  sensor_history:
+  - sensor: S2
+    start: 02/01/2024
 - telraam_segment_id: 154163
   street: Annonciadenstraat
   direction_ab_label: Staduitwaarts
   direction_ba_label: Stadinwaarts
+  sensor_history:
+  - sensor: S1
+    start: 11/09/2019
 - telraam_segment_id: 9000011803
   street: Iepenstraat
   direction_ab_label: Richting Annonciadenstraat
   direction_ba_label: Richting Coupure Rechts
+  sensor_history:
+  - sensor: S2
+    start: 05/08/2026
 - telraam_segment_id: 9000007115
   street: Rooigemlaan
   direction_ab_label: Richting Bijloke
   direction_ba_label: Richting Brugse Vaart
+  sensor_history:
+  - sensor: S2
+    start: 01/07/2024

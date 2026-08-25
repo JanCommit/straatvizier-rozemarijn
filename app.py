@@ -19,7 +19,7 @@ IVORY = "#F4F1E8"
 SAGE = "#C7D0C2"
 
 LOCAL_TIMEZONE = "Europe/Brussels"
-APP_VERSION = "0.8.5"
+APP_VERSION = "0.8.6"
 
 PROJECT_ROOT = Path(__file__).resolve().parent
 SRC_DIR = PROJECT_ROOT / "src"
@@ -375,6 +375,7 @@ def load_direction_config():
         item["street"]: {
             "ab": item.get("direction_ab_label", "A → B"),
             "ba": item.get("direction_ba_label", "B → A"),
+            "sensor_history": item.get("sensor_history", []),
         }
         for item in raw.get("segments", [])
     }
@@ -393,6 +394,37 @@ def direction_label(street, direction):
         return f'{labels.get("ba", "B → A")} (B → A)'
 
     return "Beide richtingen"
+
+
+def sensor_history_label(street):
+    history = DIRECTION_CONFIG.get(
+        street,
+        {},
+    ).get(
+        "sensor_history",
+        [],
+    )
+
+    if not history:
+        return None
+
+    parts = []
+
+    for item in history:
+        sensor = item.get("sensor")
+        start = item.get("start")
+        end = item.get("end")
+
+        if start and end:
+            parts.append(
+                f"{sensor}: {start}–{end}"
+            )
+        elif start:
+            parts.append(
+                f"{sensor}: vanaf {start}"
+            )
+
+    return " · ".join(parts) if parts else None
 
 
 def requested_directions(direction_choice):
@@ -476,13 +508,48 @@ def weekly_data(daily_df, min_hours):
         freq="W-MON",
     )
 
-    return (
+    result = (
         result
         .set_index("week")
         .reindex(full_weeks)
         .rename_axis("week")
         .reset_index()
     )
+
+    month_names = {
+        1: "jan",
+        2: "feb",
+        3: "mrt",
+        4: "apr",
+        5: "mei",
+        6: "jun",
+        7: "jul",
+        8: "aug",
+        9: "sep",
+        10: "okt",
+        11: "nov",
+        12: "dec",
+    }
+
+    result["week_end"] = (
+        result["week"]
+        + pd.Timedelta(days=6)
+    )
+
+    result["week_period"] = result.apply(
+        lambda row: (
+            f"ma {row['week'].day} "
+            f"{month_names[row['week'].month]} – "
+            f"zo {row['week_end'].day} "
+            f"{month_names[row['week_end'].month]} "
+            f"{row['week_end'].year}"
+        )
+        if pd.notna(row["week"])
+        else "",
+        axis=1,
+    )
+
+    return result
 
 
 def monthly_data(daily_df, min_hours):
@@ -617,6 +684,7 @@ def add_view(
                     mode="lines",
                     name=(f"{street} · {series_suffix}" if series_suffix else street),
                     connectgaps=False,
+                    xhoverformat="%d/%m/%Y %H:%M",
                     line=dict(
                         color=street_color,
                         width=1.6,
@@ -642,6 +710,7 @@ def add_view(
                     mode="lines",
                     name=(f"{street} · {series_suffix} — dagelijks" if series_suffix else f"{street} — dagelijks"),
                     connectgaps=False,
+                    xhoverformat="%d/%m/%Y",
                     line=dict(
                         color=street_color,
                         width=1.5,
@@ -698,21 +767,22 @@ def add_view(
                     connectgaps=False,
                     customdata=data[
                         [
+                            "week_period",
                             "sum_valid_traffic",
                             "valid_days",
                             "avg_uptime",
                         ]
                     ],
                     hovertemplate=(
-                        "<b>%{x|Week %V · %Y}</b><br>"
+                        "<b>%{customdata[0]}</b><br>"
                         "Gemiddeld per geldige dag: "
                         "%{y:,.0f}<br>"
                         "Som over geldige dagen: "
-                        "%{customdata[0]:,.0f}<br>"
+                        "%{customdata[1]:,.0f}<br>"
                         "Geldige dagen: "
-                        "%{customdata[1]:.0f}<br>"
+                        "%{customdata[2]:.0f}<br>"
                         "Gem. uptime: "
-                        "%{customdata[2]:.0%}"
+                        "%{customdata[3]:.0%}"
                         "<extra></extra>"
                     ),
                     line=dict(
@@ -800,6 +870,7 @@ def add_view(
                     mode="lines+markers",
                     name=(f"{street} · {series_suffix}" if series_suffix else street),
                     connectgaps=False,
+                    xhoverformat="%Y",
                     customdata=data[
                         [
                             "sum_valid_traffic",
@@ -1070,6 +1141,30 @@ if compare:
     st.sidebar.caption(
         "Filters gelden voor beide straten."
     )
+
+main_sensor_history = sensor_history_label(
+    selected_street
+)
+
+if main_sensor_history:
+    st.sidebar.caption(
+        f"Sensor {selected_street}: "
+        f"{main_sensor_history}"
+    )
+
+if compare:
+    comparison_sensor_history = (
+        sensor_history_label(
+            comparison_street
+        )
+    )
+
+    if comparison_sensor_history:
+        st.sidebar.caption(
+            f"Sensor {comparison_street}: "
+            f"{comparison_sensor_history}"
+        )
+
 
 analysis_type = st.sidebar.radio(
     "Analyse",
@@ -1753,7 +1848,22 @@ if analysis_type == "Autosnelheid":
             True,
         )
 
-    if speed_view == "24u-profiel":
+    if speed_view == "Per uur":
+        speed_fig.update_xaxes(
+            hoverformat="%d/%m/%Y %H:%M",
+        )
+
+    elif speed_view == "Per dag":
+        speed_fig.update_xaxes(
+            hoverformat="%d/%m/%Y",
+        )
+
+    elif speed_view == "Per jaar":
+        speed_fig.update_xaxes(
+            hoverformat="%Y",
+        )
+
+    elif speed_view == "24u-profiel":
         speed_fig.update_xaxes(
             dtick=1,
         )
