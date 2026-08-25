@@ -19,7 +19,7 @@ IVORY = "#F4F1E8"
 SAGE = "#C7D0C2"
 
 LOCAL_TIMEZONE = "Europe/Brussels"
-APP_VERSION = "0.8.6"
+APP_VERSION = "0.8.13"
 
 PROJECT_ROOT = Path(__file__).resolve().parent
 SRC_DIR = PROJECT_ROOT / "src"
@@ -275,6 +275,19 @@ def add_speed_traces(
         else MAIN_TREND_COLOR
     )
 
+    # In unified hover toont alleen V50 de gedeelde metadata.
+    # Zo worden periode en aantal auto's slechts één keer vermeld.
+    speed_customdata = (
+        data[["cars", "week_period"]]
+        if "week_period" in data.columns
+        else data[["cars"]]
+    )
+
+    v50_hover = (
+        "V50: %{y:.1f} km/u"
+        "<extra></extra>"
+    )
+
     fig.add_trace(
         go.Scatter(
             x=data["x"],
@@ -290,13 +303,8 @@ def add_speed_traces(
                 size=4,
                 color=base,
             ),
-            customdata=data[["cars"]],
-            hovertemplate=(
-                "V50: %{y:.1f} km/u<br>"
-                "Auto's in verdeling: "
-                "%{customdata[0]:,.0f}"
-                "<extra></extra>"
-            ),
+            customdata=speed_customdata,
+            hovertemplate=v50_hover,
         ),
         row=row,
         col=1,
@@ -317,11 +325,8 @@ def add_speed_traces(
                 size=4,
                 color=trend,
             ),
-            customdata=data[["cars"]],
             hovertemplate=(
-                "V85: %{y:.1f} km/u<br>"
-                "Auto's in verdeling: "
-                "%{customdata[0]:,.0f}"
+                "V85: %{y:.1f} km/u"
                 "<extra></extra>"
             ),
         ),
@@ -345,13 +350,39 @@ def add_speed_traces(
                 size=4,
                 color=base,
             ),
-            customdata=data[["cars"]],
             hovertemplate=(
-                "V95: %{y:.1f} km/u<br>"
-                "Auto's in verdeling: "
-                "%{customdata[0]:,.0f}"
+                "V95: %{y:.1f} km/u"
                 "<extra></extra>"
             ),
+        ),
+        row=row,
+        col=1,
+    )
+
+
+    metadata_hover = (
+        "<b>%{customdata[1]}</b><br>"
+        "Auto's in verdeling: %{customdata[0]:,.0f}"
+        "<extra></extra>"
+        if "week_period" in data.columns
+        else (
+            "Auto's in verdeling: %{customdata[0]:,.0f}"
+            "<extra></extra>"
+        )
+    )
+
+    fig.add_trace(
+        go.Scatter(
+            x=data["x"],
+            y=data["v50"],
+            mode="markers",
+            marker=dict(
+                size=0.1,
+                opacity=0,
+            ),
+            showlegend=False,
+            customdata=speed_customdata,
+            hovertemplate=metadata_hover,
         ),
         row=row,
         col=1,
@@ -1523,14 +1554,163 @@ flags = mode_flags(
 
 
 # ============================================================
+# Frozen header
+# ============================================================
+
+def render_frozen_header(
+    title,
+    valid_days,
+    avg_uptime_text,
+):
+    comparison_note = (
+        (
+            f" · vergelijking met {comparison_street}"
+            + (
+                " · samen in één grafiek"
+                if comparison_layout == "Samen in één grafiek"
+                else ""
+            )
+        )
+        if compare
+        else ""
+    )
+
+    st.html(
+        f"""
+        <style>
+            .sv-head {{
+                position: fixed;
+                top: 3.6rem;
+                left: 22rem;
+                right: 1.25rem;
+                z-index: 9999;
+                background: #2B2F33;
+                border: 1px solid #3A4046;
+                border-radius: 12px;
+                padding: .78rem 1rem .82rem;
+                box-shadow:
+                    0 8px 22px rgba(0,0,0,.14);
+            }}
+
+            .sv-title {{
+                font-size: 1.35rem;
+                font-weight: 700;
+                line-height: 1.2;
+                color: {IVORY};
+                margin-bottom: .18rem;
+            }}
+
+            .sv-context {{
+                font-size: .86rem;
+                color: {SAGE};
+                margin-bottom: .62rem;
+            }}
+
+            .sv-metrics {{
+                display: grid;
+                grid-template-columns:
+                    repeat(4, minmax(0,1fr));
+                gap: .9rem;
+            }}
+
+            .sv-label {{
+                font-size: .75rem;
+                color: {SAGE};
+                margin-bottom: .08rem;
+            }}
+
+            .sv-value {{
+                font-size: 1.08rem;
+                font-weight: 650;
+                color: {IVORY};
+            }}
+
+            .sv-spacer {{
+                height: 9.5rem;
+            }}
+
+            @media(max-width:900px) {{
+                .sv-head {{
+                    left: 1rem;
+                    right: 1rem;
+                    top: 3.4rem;
+                }}
+
+                .sv-metrics {{
+                    grid-template-columns:
+                        repeat(2,1fr);
+                }}
+
+                .sv-spacer {{
+                    height: 12rem;
+                }}
+            }}
+        </style>
+
+        <div class="sv-head">
+            <div class="sv-title">
+                {title} — {selected_street}
+            </div>
+
+            <div class="sv-context">
+                Lokale Belgische tijd
+                {start_hour:02d}:00–{end_hour:02d}:00
+                · minimum uptime {uptime_pct}%
+                · minimum {min_hours} geldige uren per dag
+                · {direction_choice}
+                {comparison_note}
+            </div>
+
+            <div class="sv-metrics">
+                <div>
+                    <div class="sv-label">
+                        Eerste meting
+                    </div>
+                    <div class="sv-value">
+                        {main_first.strftime("%d/%m/%Y")}
+                    </div>
+                </div>
+
+                <div>
+                    <div class="sv-label">
+                        Laatste meting
+                    </div>
+                    <div class="sv-value">
+                        {main_last.strftime("%d/%m/%Y")}
+                    </div>
+                </div>
+
+                <div>
+                    <div class="sv-label">
+                        Geldige dagen
+                    </div>
+                    <div class="sv-value">
+                        {valid_days}
+                    </div>
+                </div>
+
+                <div>
+                    <div class="sv-label">
+                        Gem. uptime
+                    </div>
+                    <div class="sv-value">
+                        {avg_uptime_text}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="sv-spacer"></div>
+        """
+    )
+
+
+
+# ============================================================
 # Autosnelheid
 # ============================================================
 
 if analysis_type == "Autosnelheid":
-    st.header(
-        "Autosnelheid"
-    )
-
     speed_views = [
         "Per uur",
         "Per dag",
@@ -1541,15 +1721,6 @@ if analysis_type == "Autosnelheid":
         "Weekprofiel",
         "Jaarprofiel",
     ]
-
-    speed_view = st.segmented_control(
-        "Weergave",
-        speed_views,
-        default="Per dag",
-        selection_mode="single",
-        label_visibility="collapsed",
-        key="speed_view",
-    ) or "Per dag"
 
     # Dagelijkse histogrammen zijn compact en vormen de basis
     # voor dag/week/maand/jaar en de profielweergaven.
@@ -1579,6 +1750,36 @@ if analysis_type == "Autosnelheid":
             if compare
             else pd.DataFrame()
         )
+
+    speed_valid_main = valid_daily_speed(
+        speed_daily_main,
+        min_hours,
+    )
+
+    speed_avg_uptime = weighted_avg_uptime(
+        speed_daily_main
+    )
+
+    speed_avg_uptime_text = (
+        f"{speed_avg_uptime:.0%}"
+        if speed_avg_uptime is not None
+        else "—"
+    )
+
+    render_frozen_header(
+        title="Autosnelheid",
+        valid_days=len(speed_valid_main),
+        avg_uptime_text=speed_avg_uptime_text,
+    )
+
+    speed_view = st.segmented_control(
+        "Weergave",
+        speed_views,
+        default="Per dag",
+        selection_mode="single",
+        label_visibility="collapsed",
+        key="speed_view",
+    ) or "Per dag"
 
     speed_hourly_main = pd.DataFrame()
     speed_hourly_compare = pd.DataFrame()
@@ -1741,6 +1942,40 @@ if analysis_type == "Autosnelheid":
                     .rename_axis("x")
                     .reset_index()
                 )
+
+                if period == "week":
+                    month_names = {
+                        1: "jan",
+                        2: "feb",
+                        3: "mrt",
+                        4: "apr",
+                        5: "mei",
+                        6: "jun",
+                        7: "jul",
+                        8: "aug",
+                        9: "sep",
+                        10: "okt",
+                        11: "nov",
+                        12: "dec",
+                    }
+
+                    data["week_end"] = (
+                        data["x"]
+                        + pd.Timedelta(days=6)
+                    )
+
+                    data["week_period"] = data.apply(
+                        lambda row: (
+                            f"ma {row['x'].day} "
+                            f"{month_names[row['x'].month]} – "
+                            f"zo {row['week_end'].day} "
+                            f"{month_names[row['week_end'].month]} "
+                            f"{row['week_end'].year}"
+                        )
+                        if pd.notna(row["x"])
+                        else "",
+                        axis=1,
+                    )
 
             return data
 
@@ -2043,11 +2278,6 @@ valid_compare = (
     else None
 )
 
-
-# ============================================================
-# Frozen header
-# ============================================================
-
 avg_uptime_main = weighted_avg_uptime(
     daily_main
 )
@@ -2058,156 +2288,16 @@ avg_uptime_text = (
     else "—"
 )
 
-comparison_note = (
-    (
-        f" · vergelijking met {comparison_street}"
-        + (
-            " · samen in één grafiek"
-            if comparison_layout == "Samen in één grafiek"
-            else ""
-        )
-    )
-    if compare
-    else ""
-)
-
-st.html(
-    f"""
-    <style>
-        .sv-head {{
-            position: fixed;
-            top: 3.6rem;
-            left: 22rem;
-            right: 1.25rem;
-            z-index: 9999;
-            background: #2B2F33;
-            border: 1px solid #3A4046;
-            border-radius: 12px;
-            padding: .78rem 1rem .82rem;
-            box-shadow:
-                0 8px 22px rgba(0,0,0,.14);
-        }}
-
-        .sv-title {{
-            font-size: 1.35rem;
-            font-weight: 700;
-            line-height: 1.2;
-            color: {IVORY};
-            margin-bottom: .18rem;
-        }}
-
-        .sv-context {{
-            font-size: .86rem;
-            color: {SAGE};
-            margin-bottom: .62rem;
-        }}
-
-        .sv-metrics {{
-            display: grid;
-            grid-template-columns:
-                repeat(4, minmax(0,1fr));
-            gap: .9rem;
-        }}
-
-        .sv-label {{
-            font-size: .75rem;
-            color: {SAGE};
-            margin-bottom: .08rem;
-        }}
-
-        .sv-value {{
-            font-size: 1.08rem;
-            font-weight: 650;
-            color: {IVORY};
-        }}
-
-        .sv-spacer {{
-            height: 1.4rem;
-        }}
-
-        @media(max-width:900px) {{
-            .sv-head {{
-                left: 1rem;
-                right: 1rem;
-                top: 3.4rem;
-            }}
-
-            .sv-metrics {{
-                grid-template-columns:
-                    repeat(2,1fr);
-            }}
-
-            .sv-spacer {{
-                height: 5.5rem;
-            }}
-        }}
-    </style>
-
-    <div class="sv-head">
-        <div class="sv-title">
-            {traffic_label} — {selected_street}
-        </div>
-
-        <div class="sv-context">
-            Lokale Belgische tijd
-            {start_hour:02d}:00–{end_hour:02d}:00
-            · minimum uptime {uptime_pct}%
-            · minimum {min_hours} geldige uren per dag
-            · {direction_choice}
-            {comparison_note}
-        </div>
-
-        <div class="sv-metrics">
-            <div>
-                <div class="sv-label">
-                    Eerste meting
-                </div>
-                <div class="sv-value">
-                    {main_first.strftime("%d/%m/%Y")}
-                </div>
-            </div>
-
-            <div>
-                <div class="sv-label">
-                    Laatste meting
-                </div>
-                <div class="sv-value">
-                    {main_last.strftime("%d/%m/%Y")}
-                </div>
-            </div>
-
-            <div>
-                <div class="sv-label">
-                    Geldige dagen
-                </div>
-                <div class="sv-value">
-                    {len(valid_main)}
-                </div>
-            </div>
-
-            <div>
-                <div class="sv-label">
-                    Gem. uptime
-                </div>
-                <div class="sv-value">
-                    {avg_uptime_text}
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="sv-spacer"></div>
-    """
+render_frozen_header(
+    title=f"Aantallen {traffic_label.lower()}",
+    valid_days=len(valid_main),
+    avg_uptime_text=avg_uptime_text,
 )
 
 
 # ============================================================
 # Weergave
 # ============================================================
-
-st.header(
-    "Verkeersverloop"
-)
 
 views = [
     "Per uur",
