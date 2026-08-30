@@ -19,7 +19,7 @@ IVORY = "#F4F1E8"
 SAGE = "#C7D0C2"
 
 LOCAL_TIMEZONE = "Europe/Brussels"
-APP_VERSION = "0.8.13"
+APP_VERSION = "0.8.16"
 
 PROJECT_ROOT = Path(__file__).resolve().parent
 SRC_DIR = PROJECT_ROOT / "src"
@@ -241,6 +241,131 @@ def cached_get_speed_hour_profile(
     )
 
 
+MONTH_NAMES_NL = {
+    1: "januari",
+    2: "februari",
+    3: "maart",
+    4: "april",
+    5: "mei",
+    6: "juni",
+    7: "juli",
+    8: "augustus",
+    9: "september",
+    10: "oktober",
+    11: "november",
+    12: "december",
+}
+
+MONTH_ABBR_NL = {
+    1: "Jan",
+    2: "Feb",
+    3: "Mrt",
+    4: "Apr",
+    5: "Mei",
+    6: "Jun",
+    7: "Jul",
+    8: "Aug",
+    9: "Sep",
+    10: "Okt",
+    11: "Nov",
+    12: "Dec",
+}
+
+WEEKDAY_ABBR_NL = [
+    "Ma",
+    "Di",
+    "Wo",
+    "Do",
+    "Vr",
+    "Za",
+    "Zo",
+]
+
+WEEKDAY_NAMES_NL = [
+    "Maandag",
+    "Dinsdag",
+    "Woensdag",
+    "Donderdag",
+    "Vrijdag",
+    "Zaterdag",
+    "Zondag",
+]
+
+
+def hour_period_label(value):
+    if pd.isna(value):
+        return ""
+
+    ts = pd.Timestamp(value)
+    end = ts + pd.Timedelta(hours=1)
+
+    return (
+        f"{ts.strftime('%d/%m/%Y')} "
+        f"{ts.hour:02d}u–{end.hour:02d}u"
+    )
+
+
+def profile_hour_label(value):
+    if pd.isna(value):
+        return ""
+
+    hour = int(value)
+    return f"{hour:02d}u–{(hour + 1) % 24:02d}u"
+
+
+def month_label(value):
+    if pd.isna(value):
+        return ""
+
+    ts = pd.Timestamp(value)
+    return f"{MONTH_NAMES_NL[ts.month].capitalize()} {ts.year}"
+
+
+def add_time_hover_carrier(
+    fig,
+    row,
+    x,
+    labels,
+):
+    if x is None or len(x) == 0:
+        return
+
+    carrier = pd.DataFrame(
+        {
+            "x": list(x),
+            "label": list(labels),
+        }
+    ).dropna(subset=["x"])
+
+    if carrier.empty:
+        return
+
+    carrier = carrier.drop_duplicates(
+        subset=["x"],
+        keep="first",
+    )
+
+    fig.add_trace(
+        go.Scatter(
+            x=carrier["x"],
+            y=[0] * len(carrier),
+            mode="markers",
+            marker=dict(
+                size=0.1,
+                opacity=0,
+            ),
+            showlegend=False,
+            text=carrier["label"],
+            hovertemplate=(
+                "<b>%{text}</b>"
+                "<extra></extra>"
+            ),
+        ),
+        row=row,
+        col=1,
+    )
+
+
 def valid_daily_speed(
     df,
     min_hours,
@@ -277,11 +402,7 @@ def add_speed_traces(
 
     # In unified hover toont alleen V50 de gedeelde metadata.
     # Zo worden periode en aantal auto's slechts één keer vermeld.
-    speed_customdata = (
-        data[["cars", "week_period"]]
-        if "week_period" in data.columns
-        else data[["cars"]]
-    )
+    speed_customdata = data[["cars"]]
 
     v50_hover = (
         "V50: %{y:.1f} km/u"
@@ -361,14 +482,8 @@ def add_speed_traces(
 
 
     metadata_hover = (
-        "<b>%{customdata[1]}</b><br>"
         "Auto's in verdeling: %{customdata[0]:,.0f}"
         "<extra></extra>"
-        if "week_period" in data.columns
-        else (
-            "Auto's in verdeling: %{customdata[0]:,.0f}"
-            "<extra></extra>"
-        )
     )
 
     fig.add_trace(
@@ -715,7 +830,15 @@ def add_view(
                     mode="lines",
                     name=(f"{street} · {series_suffix}" if series_suffix else street),
                     connectgaps=False,
-                    xhoverformat="%d/%m/%Y %H:%M",
+                    hovertemplate=(
+                        (
+                            f"{street} · {series_suffix}: "
+                            if series_suffix
+                            else f"{street}: "
+                        )
+                        + "%{y:,.0f}"
+                        + "<extra></extra>"
+                    ),
                     line=dict(
                         color=street_color,
                         width=1.6,
@@ -741,7 +864,15 @@ def add_view(
                     mode="lines",
                     name=(f"{street} · {series_suffix} — dagelijks" if series_suffix else f"{street} — dagelijks"),
                     connectgaps=False,
-                    xhoverformat="%d/%m/%Y",
+                    hovertemplate=(
+                        (
+                            f"{street} · {series_suffix}: "
+                            if series_suffix
+                            else f"{street}: "
+                        )
+                        + "%{y:,.0f}"
+                        + "<extra></extra>"
+                    ),
                     line=dict(
                         color=street_color,
                         width=1.5,
@@ -770,6 +901,16 @@ def add_view(
                             + f" — {rolling_days}-daags gemiddelde"
                         ),
                         connectgaps=False,
+                        hovertemplate=(
+                            (
+                                f"{street} · {series_suffix}"
+                                if series_suffix
+                                else street
+                            )
+                            + f" — {rolling_days}-daags gemiddelde: "
+                            + "%{y:,.0f}"
+                            + "<extra></extra>"
+                        ),
                         line=dict(
                             color=trend_color,
                             width=3.2,
@@ -805,7 +946,6 @@ def add_view(
                         ]
                     ],
                     hovertemplate=(
-                        "<b>%{customdata[0]}</b><br>"
                         "Gemiddeld per geldige dag: "
                         "%{y:,.0f}<br>"
                         "Som over geldige dagen: "
@@ -857,7 +997,6 @@ def add_view(
                         ]
                     ],
                     hovertemplate=(
-                        "<b>%{x|%B %Y}</b><br>"
                         "Gemiddeld per geldige dag: "
                         "%{y:,.0f}<br>"
                         "Som over geldige dagen: "
@@ -912,7 +1051,6 @@ def add_view(
                         ]
                     ],
                     hovertemplate=(
-                        "<b>%{x|%Y}</b><br>"
                         "Gemiddeld per geldige dag: "
                         "%{y:,.0f}<br>"
                         "Som over geldige dagen: "
@@ -959,6 +1097,15 @@ def add_view(
                     y=data["avg_traffic"],
                     mode="lines+markers",
                     name=(f"{street} · {series_suffix}" if series_suffix else street),
+                    hovertemplate=(
+                        (
+                            f"{street} · {series_suffix}: "
+                            if series_suffix
+                            else f"{street}: "
+                        )
+                        + "%{y:,.0f}"
+                        + "<extra></extra>"
+                    ),
                     line=dict(
                         color=street_color,
                         width=2.5,
@@ -1005,6 +1152,15 @@ def add_view(
                     y=data["avg"],
                     mode="lines+markers",
                     name=(f"{street} · {series_suffix}" if series_suffix else street),
+                    hovertemplate=(
+                        (
+                            f"{street} · {series_suffix}: "
+                            if series_suffix
+                            else f"{street}: "
+                        )
+                        + "%{y:,.0f}"
+                        + "<extra></extra>"
+                    ),
                     line=dict(
                         color=street_color,
                         width=2.5,
@@ -1021,15 +1177,7 @@ def add_view(
             fig.update_xaxes(
                 tickmode="array",
                 tickvals=list(range(7)),
-                ticktext=[
-                    "Ma",
-                    "Di",
-                    "Wo",
-                    "Do",
-                    "Vr",
-                    "Za",
-                    "Zo",
-                ],
+                ticktext=WEEKDAY_ABBR_NL,
                 row=row,
                 col=1,
             )
@@ -1063,6 +1211,15 @@ def add_view(
                 y=data["avg"],
                 mode="lines+markers",
                 name=(f"{street} · {series_suffix}" if series_suffix else street),
+                hovertemplate=(
+                    (
+                        f"{street} · {series_suffix}: "
+                        if series_suffix
+                        else f"{street}: "
+                    )
+                    + "%{y:,.0f}"
+                    + "<extra></extra>"
+                ),
                 line=dict(
                     color=street_color,
                     width=2.5,
@@ -1080,18 +1237,8 @@ def add_view(
             tickmode="array",
             tickvals=list(range(1, 13)),
             ticktext=[
-                "Jan",
-                "Feb",
-                "Mrt",
-                "Apr",
-                "Mei",
-                "Jun",
-                "Jul",
-                "Aug",
-                "Sep",
-                "Okt",
-                "Nov",
-                "Dec",
+                MONTH_ABBR_NL[index]
+                for index in range(1, 13)
             ],
             row=row,
             col=1,
@@ -2008,6 +2155,68 @@ if analysis_type == "Autosnelheid":
 
         return data
 
+    def speed_time_hover_data(
+        view_name,
+        data,
+    ):
+        if data is None or data.empty:
+            return pd.DataFrame(
+                columns=["x", "label"]
+            )
+
+        result = pd.DataFrame(
+            {"x": data["x"]}
+        )
+
+        if view_name == "Per uur":
+            result["label"] = data["x"].apply(
+                hour_period_label
+            )
+
+        elif view_name == "Per dag":
+            result["label"] = (
+                pd.to_datetime(data["x"])
+                .dt.strftime("%d/%m/%Y")
+            )
+
+        elif view_name == "Per week":
+            result["label"] = data["week_period"]
+
+        elif view_name == "Per maand":
+            result["label"] = data["x"].apply(
+                month_label
+            )
+
+        elif view_name == "Per jaar":
+            result["label"] = (
+                pd.to_datetime(data["x"])
+                .dt.strftime("%Y")
+            )
+
+        elif view_name == "24u-profiel":
+            result["label"] = data["x"].apply(
+                profile_hour_label
+            )
+
+        elif view_name == "Weekprofiel":
+            result["label"] = data["x"].apply(
+                lambda value:
+                    WEEKDAY_NAMES_NL[int(value)]
+                    if pd.notna(value)
+                    else ""
+            )
+
+        else:
+            result["label"] = data["x"].apply(
+                lambda value:
+                    MONTH_NAMES_NL[int(value)].capitalize()
+                    if pd.notna(value)
+                    else ""
+            )
+
+        return result
+
+
     main_speed_plot = speed_view_data(
         speed_view,
         speed_hourly_main,
@@ -2067,6 +2276,56 @@ if analysis_type == "Autosnelheid":
         ),
     )
 
+    main_speed_hover = speed_time_hover_data(
+        speed_view,
+        main_speed_plot,
+    )
+
+    compare_speed_hover = (
+        speed_time_hover_data(
+            speed_view,
+            compare_speed_plot,
+        )
+        if compare
+        else pd.DataFrame(
+            columns=["x", "label"]
+        )
+    )
+
+    if overlay and compare:
+        combined_speed_hover = pd.concat(
+            [
+                main_speed_hover,
+                compare_speed_hover,
+            ],
+            ignore_index=True,
+        ).drop_duplicates(
+            subset=["x"],
+            keep="first",
+        )
+
+        add_time_hover_carrier(
+            speed_fig,
+            1,
+            combined_speed_hover["x"],
+            combined_speed_hover["label"],
+        )
+    else:
+        add_time_hover_carrier(
+            speed_fig,
+            1,
+            main_speed_hover["x"],
+            main_speed_hover["label"],
+        )
+
+        if compare and speed_rows == 2:
+            add_time_hover_carrier(
+                speed_fig,
+                2,
+                compare_speed_hover["x"],
+                compare_speed_hover["label"],
+            )
+
     add_speed_traces(
         speed_fig,
         1,
@@ -2083,22 +2342,25 @@ if analysis_type == "Autosnelheid":
             True,
         )
 
-    if speed_view == "Per uur":
-        speed_fig.update_xaxes(
-            hoverformat="%d/%m/%Y %H:%M",
-        )
+    speed_x_title = {
+        "Per uur": "Tijd (per uur)",
+        "Per dag": "Tijd (per dag)",
+        "Per week": "Tijd (per week)",
+        "Per maand": "Tijd (per maand)",
+        "Per jaar": "Tijd (per jaar)",
+        "24u-profiel": "Uur in dag",
+        "Weekprofiel": "Dag in week",
+        "Jaarprofiel": "Maand in jaar",
+    }[speed_view]
 
-    elif speed_view == "Per dag":
-        speed_fig.update_xaxes(
-            hoverformat="%d/%m/%Y",
-        )
+    speed_fig.update_xaxes(
+        title_text=speed_x_title,
+        unifiedhovertitle=dict(
+            text="&#8203;",
+        ),
+    )
 
-    elif speed_view == "Per jaar":
-        speed_fig.update_xaxes(
-            hoverformat="%Y",
-        )
-
-    elif speed_view == "24u-profiel":
+    if speed_view == "24u-profiel":
         speed_fig.update_xaxes(
             dtick=1,
         )
@@ -2107,15 +2369,7 @@ if analysis_type == "Autosnelheid":
         speed_fig.update_xaxes(
             tickmode="array",
             tickvals=list(range(7)),
-            ticktext=[
-                "Ma",
-                "Di",
-                "Wo",
-                "Do",
-                "Vr",
-                "Za",
-                "Zo",
-            ],
+            ticktext=WEEKDAY_ABBR_NL,
         )
 
     elif speed_view == "Jaarprofiel":
@@ -2123,18 +2377,8 @@ if analysis_type == "Autosnelheid":
             tickmode="array",
             tickvals=list(range(1, 13)),
             ticktext=[
-                "Jan",
-                "Feb",
-                "Mrt",
-                "Apr",
-                "Mei",
-                "Jun",
-                "Jul",
-                "Aug",
-                "Sep",
-                "Okt",
-                "Nov",
-                "Dec",
+                MONTH_ABBR_NL[index]
+                for index in range(1, 13)
             ],
         )
 
@@ -2428,6 +2672,182 @@ if view == "24u-profiel":
 # Plot
 # ============================================================
 
+def traffic_time_hover_data(
+    view_name,
+    daily,
+    valid,
+    hourly=None,
+    hour_profile=None,
+):
+    if view_name == "Per uur":
+        data = hourly_with_gaps(
+            hourly
+            if hourly is not None
+            else pd.DataFrame()
+        )
+
+        if data.empty:
+            return pd.DataFrame(
+                columns=["x", "label"]
+            )
+
+        return pd.DataFrame(
+            {
+                "x": data["measured_at_local"],
+                "label": data[
+                    "measured_at_local"
+                ].apply(hour_period_label),
+            }
+        )
+
+    if view_name == "Per dag":
+        data = add_missing_days_as_gaps(
+            valid
+        )
+
+        if data.empty:
+            return pd.DataFrame(
+                columns=["x", "label"]
+            )
+
+        return pd.DataFrame(
+            {
+                "x": data["date"],
+                "label": pd.to_datetime(
+                    data["date"]
+                ).dt.strftime("%d/%m/%Y"),
+            }
+        )
+
+    if view_name == "Per week":
+        data = weekly_data(
+            daily,
+            min_hours,
+        )
+
+        if data.empty:
+            return pd.DataFrame(
+                columns=["x", "label"]
+            )
+
+        return pd.DataFrame(
+            {
+                "x": data["week"],
+                "label": data["week_period"],
+            }
+        )
+
+    if view_name == "Per maand":
+        data = monthly_data(
+            daily,
+            min_hours,
+        )
+
+        if data.empty:
+            return pd.DataFrame(
+                columns=["x", "label"]
+            )
+
+        return pd.DataFrame(
+            {
+                "x": data["month"],
+                "label": data["month"].apply(
+                    month_label
+                ),
+            }
+        )
+
+    if view_name == "Per jaar":
+        data = yearly_data(
+            daily,
+            min_hours,
+        )
+
+        if data.empty:
+            return pd.DataFrame(
+                columns=["x", "label"]
+            )
+
+        return pd.DataFrame(
+            {
+                "x": data["year"],
+                "label": pd.to_datetime(
+                    data["year"]
+                ).dt.strftime("%Y"),
+            }
+        )
+
+    if view_name == "24u-profiel":
+        data = (
+            hour_profile
+            if hour_profile is not None
+            else pd.DataFrame()
+        )
+
+        if data.empty:
+            return pd.DataFrame(
+                columns=["x", "label"]
+            )
+
+        return pd.DataFrame(
+            {
+                "x": data["hour"],
+                "label": data["hour"].apply(
+                    profile_hour_label
+                ),
+            }
+        )
+
+    if view_name == "Weekprofiel":
+        data = valid.copy()
+
+        if data.empty:
+            return pd.DataFrame(
+                columns=["x", "label"]
+            )
+
+        weekdays = (
+            data["date"]
+            .dt.weekday
+            .drop_duplicates()
+            .sort_values()
+        )
+
+        return pd.DataFrame(
+            {
+                "x": weekdays,
+                "label": weekdays.apply(
+                    lambda value:
+                        WEEKDAY_NAMES_NL[int(value)]
+                ),
+            }
+        )
+
+    data = valid.copy()
+
+    if data.empty:
+        return pd.DataFrame(
+            columns=["x", "label"]
+        )
+
+    months = (
+        data["date"]
+        .dt.month
+        .drop_duplicates()
+        .sort_values()
+    )
+
+    return pd.DataFrame(
+        {
+            "x": months,
+            "label": months.apply(
+                lambda value:
+                    MONTH_NAMES_NL[int(value)].capitalize()
+            ),
+        }
+    )
+
+
 comparison_overlay = (
     compare
     and comparison_layout == "Samen in één grafiek"
@@ -2471,6 +2891,81 @@ fig = make_subplots(
         else None
     ),
 )
+
+main_hover_direction = directions[0]
+
+main_time_hover = traffic_time_hover_data(
+    view,
+    daily_main_by_direction[
+        main_hover_direction
+    ],
+    valid_main_by_direction[
+        main_hover_direction
+    ],
+    hourly=hourly_main_by_direction.get(
+        main_hover_direction
+    ),
+    hour_profile=hour_profile_main_by_direction.get(
+        main_hover_direction
+    ),
+)
+
+compare_time_hover = (
+    traffic_time_hover_data(
+        view,
+        daily_compare_by_direction[
+            main_hover_direction
+        ],
+        valid_compare_by_direction[
+            main_hover_direction
+        ],
+        hourly=hourly_compare_by_direction.get(
+            main_hover_direction
+        ),
+        hour_profile=hour_profile_compare_by_direction.get(
+            main_hover_direction
+        ),
+    )
+    if compare
+    else pd.DataFrame(
+        columns=["x", "label"]
+    )
+)
+
+if comparison_overlay and compare:
+    combined_time_hover = pd.concat(
+        [
+            main_time_hover,
+            compare_time_hover,
+        ],
+        ignore_index=True,
+    ).drop_duplicates(
+        subset=["x"],
+        keep="first",
+    )
+
+    add_time_hover_carrier(
+        fig,
+        1,
+        combined_time_hover["x"],
+        combined_time_hover["label"],
+    )
+else:
+    add_time_hover_carrier(
+        fig,
+        1,
+        main_time_hover["x"],
+        main_time_hover["label"],
+    )
+
+    if compare and rows == 2:
+        add_time_hover_carrier(
+            fig,
+            2,
+            compare_time_hover["x"],
+            compare_time_hover["label"],
+        )
+
 
 y_label = None
 
@@ -2663,7 +3158,22 @@ if compare and not comparison_overlay:
     )
 
 
+traffic_x_title = {
+    "Per uur": "Tijd (per uur)",
+    "Per dag": "Tijd (per dag)",
+    "Per week": "Tijd (per week)",
+    "Per maand": "Tijd (per maand)",
+    "Per jaar": "Tijd (per jaar)",
+    "24u-profiel": "Uur in dag",
+    "Weekprofiel": "Dag in week",
+    "Jaarprofiel": "Maand in jaar",
+}[view]
+
 fig.update_xaxes(
+    title_text=traffic_x_title,
+    unifiedhovertitle=dict(
+        text="&#8203;",
+    ),
     tickfont=dict(
         size=12,
         color=AXIS_TEXT_COLOR,
