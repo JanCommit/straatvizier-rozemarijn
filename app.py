@@ -18,7 +18,7 @@ IVORY = "#F4F1E8"
 SAGE = "#C7D0C2"
 
 LOCAL_TIMEZONE = "Europe/Brussels"
-APP_VERSION = "0.8.22"
+APP_VERSION = "0.8.23"
 
 PROJECT_ROOT = Path(__file__).resolve().parent
 SRC_DIR = PROJECT_ROOT / "src"
@@ -75,6 +75,10 @@ from straatvizier.traffic_helpers import (
     requested_directions,
     traffic_label_for,
     mode_flags,
+)
+
+from straatvizier.traffic_hover_helpers import (
+    traffic_time_hover_data,
 )
 
 from straatvizier.segment_config import (
@@ -1957,182 +1961,6 @@ if view == "24u-profiel":
 # Plot
 # ============================================================
 
-def traffic_time_hover_data(
-    view_name,
-    daily,
-    valid,
-    hourly=None,
-    hour_profile=None,
-):
-    if view_name == "Per uur":
-        data = hourly_with_gaps(
-            hourly
-            if hourly is not None
-            else pd.DataFrame()
-        )
-
-        if data.empty:
-            return pd.DataFrame(
-                columns=["x", "label"]
-            )
-
-        return pd.DataFrame(
-            {
-                "x": data["measured_at_local"],
-                "label": data[
-                    "measured_at_local"
-                ].apply(hour_period_label),
-            }
-        )
-
-    if view_name == "Per dag":
-        data = add_missing_days_as_gaps(
-            valid
-        )
-
-        if data.empty:
-            return pd.DataFrame(
-                columns=["x", "label"]
-            )
-
-        return pd.DataFrame(
-            {
-                "x": data["date"],
-                "label": pd.to_datetime(
-                    data["date"]
-                ).dt.strftime("%d/%m/%Y"),
-            }
-        )
-
-    if view_name == "Per week":
-        data = weekly_data(
-            daily,
-            min_hours,
-        )
-
-        if data.empty:
-            return pd.DataFrame(
-                columns=["x", "label"]
-            )
-
-        return pd.DataFrame(
-            {
-                "x": data["week"],
-                "label": data["week_period"],
-            }
-        )
-
-    if view_name == "Per maand":
-        data = monthly_data(
-            daily,
-            min_hours,
-        )
-
-        if data.empty:
-            return pd.DataFrame(
-                columns=["x", "label"]
-            )
-
-        return pd.DataFrame(
-            {
-                "x": data["month"],
-                "label": data["month"].apply(
-                    month_label
-                ),
-            }
-        )
-
-    if view_name == "Per jaar":
-        data = yearly_data(
-            daily,
-            min_hours,
-        )
-
-        if data.empty:
-            return pd.DataFrame(
-                columns=["x", "label"]
-            )
-
-        return pd.DataFrame(
-            {
-                "x": data["year"],
-                "label": pd.to_datetime(
-                    data["year"]
-                ).dt.strftime("%Y"),
-            }
-        )
-
-    if view_name == "24u-profiel":
-        data = (
-            hour_profile
-            if hour_profile is not None
-            else pd.DataFrame()
-        )
-
-        if data.empty:
-            return pd.DataFrame(
-                columns=["x", "label"]
-            )
-
-        return pd.DataFrame(
-            {
-                "x": data["hour"],
-                "label": data["hour"].apply(
-                    profile_hour_label
-                ),
-            }
-        )
-
-    if view_name == "Weekprofiel":
-        data = valid.copy()
-
-        if data.empty:
-            return pd.DataFrame(
-                columns=["x", "label"]
-            )
-
-        weekdays = (
-            data["date"]
-            .dt.weekday
-            .drop_duplicates()
-            .sort_values()
-        )
-
-        return pd.DataFrame(
-            {
-                "x": weekdays,
-                "label": weekdays.apply(
-                    lambda value:
-                        WEEKDAY_NAMES_NL[int(value)]
-                ),
-            }
-        )
-
-    data = valid.copy()
-
-    if data.empty:
-        return pd.DataFrame(
-            columns=["x", "label"]
-        )
-
-    months = (
-        data["date"]
-        .dt.month
-        .drop_duplicates()
-        .sort_values()
-    )
-
-    return pd.DataFrame(
-        {
-            "x": months,
-            "label": months.apply(
-                lambda value:
-                    MONTH_NAMES_NL[int(value)].capitalize()
-            ),
-        }
-    )
-
-
 comparison_overlay = (
     compare
     and comparison_layout == "Samen in één grafiek"
@@ -2193,6 +2021,7 @@ main_time_hover = traffic_time_hover_data(
     hour_profile=hour_profile_main_by_direction.get(
         main_hover_direction
     ),
+    min_hours=min_hours,
 )
 
 compare_time_hover = (
@@ -2210,6 +2039,7 @@ compare_time_hover = (
         hour_profile=hour_profile_compare_by_direction.get(
             main_hover_direction
         ),
+        min_hours=min_hours,
     )
     if compare
     else pd.DataFrame(
