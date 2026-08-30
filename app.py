@@ -19,7 +19,7 @@ IVORY = "#F4F1E8"
 SAGE = "#C7D0C2"
 
 LOCAL_TIMEZONE = "Europe/Brussels"
-APP_VERSION = "0.8.18"
+APP_VERSION = "0.8.19"
 
 PROJECT_ROOT = Path(__file__).resolve().parent
 SRC_DIR = PROJECT_ROOT / "src"
@@ -68,6 +68,12 @@ from straatvizier.data_helpers import (
     monthly_data,
     yearly_data,
     hourly_with_gaps,
+)
+
+from straatvizier.traffic_helpers import (
+    requested_directions,
+    traffic_label_for,
+    mode_flags,
 )
 
 
@@ -468,38 +474,7 @@ def sensor_history_label(street):
     return " · ".join(parts) if parts else None
 
 
-def requested_directions(direction_choice):
-    if direction_choice == "Richtingen apart tonen":
-        return ["ab", "ba"]
 
-    if direction_choice == "A → B":
-        return ["ab"]
-
-    if direction_choice == "B → A":
-        return ["ba"]
-
-    return ["both"]
-
-
-def traffic_label_for(labels):
-    modes = [MODES[label] for label in labels]
-
-    if set(modes) == {"car", "heavy"}:
-        return "Gemotoriseerd verkeer"
-
-    if len(labels) == 1:
-        return labels[0]
-
-    return " + ".join(labels)
-
-
-def mode_flags(selected_modes):
-    return {
-        "include_car": "car" in selected_modes,
-        "include_bike": "bike" in selected_modes,
-        "include_heavy": "heavy" in selected_modes,
-        "include_pedestrian": "pedestrian" in selected_modes,
-    }
 
 
 
