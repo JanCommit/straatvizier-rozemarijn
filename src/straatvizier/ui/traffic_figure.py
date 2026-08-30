@@ -63,7 +63,7 @@ def build_traffic_figure(
             }
         ),
         vertical_spacing=(
-            .10
+            .16
             if compare and not comparison_overlay
             else 0
         ),
@@ -305,6 +305,64 @@ def build_traffic_figure(
             row=2,
             col=1,
         )
+
+
+    if not y_axis_from_zero:
+        primary_axis_names = [
+            ("y", 1),
+        ]
+
+        if compare and not comparison_overlay:
+            primary_axis_names.append(
+                ("y3", 2)
+            )
+
+        for axis_name, row in primary_axis_names:
+            values = []
+
+            for trace in fig.data:
+                if getattr(trace, "yaxis", None) != axis_name:
+                    continue
+
+                marker = getattr(trace, "marker", None)
+                if (
+                    marker is not None
+                    and getattr(marker, "opacity", None) == 0
+                ):
+                    continue
+
+                y_values = getattr(trace, "y", None)
+                if y_values is None:
+                    continue
+
+                numeric = pd.to_numeric(
+                    pd.Series(y_values),
+                    errors="coerce",
+                ).dropna()
+
+                values.extend(
+                    numeric.tolist()
+                )
+
+            if values:
+                y_min = min(values)
+                y_max = max(values)
+                span = y_max - y_min
+                padding = (
+                    span * .05
+                    if span > 0
+                    else max(abs(y_max) * .05, 1)
+                )
+
+                fig.update_yaxes(
+                    range=[
+                        y_min - padding,
+                        y_max + padding,
+                    ],
+                    row=row,
+                    col=1,
+                    secondary_y=False,
+                )
 
 
     # Dezelfde y-schaal ook rechts tonen.
