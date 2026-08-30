@@ -303,6 +303,10 @@ def transform_record(
         "night_right":
             record.get("night_rgt"),
 
+
+        "v85": record.get("v85"),
+        "car_speed_hist_0to120plus": record.get("car_speed_hist_0to120plus"),
+
         "direction":
             record.get("direction"),
         "timezone":
