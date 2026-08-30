@@ -18,7 +18,7 @@ IVORY = "#F4F1E8"
 SAGE = "#C7D0C2"
 
 LOCAL_TIMEZONE = "Europe/Brussels"
-APP_VERSION = "0.8.25"
+APP_VERSION = "0.8.26"
 
 PROJECT_ROOT = Path(__file__).resolve().parent
 SRC_DIR = PROJECT_ROOT / "src"
@@ -93,6 +93,11 @@ from straatvizier.segment_config import (
 from straatvizier.speed_helpers import (
     speed_view_data,
     speed_time_hover_data,
+)
+
+from straatvizier.ui.speed_chart import (
+    valid_daily_speed,
+    add_speed_traces,
 )
 
 
@@ -286,142 +291,6 @@ def cached_get_speed_hour_profile(
     )
 
 
-def valid_daily_speed(
-    df,
-    min_hours,
-):
-    if df.empty:
-        return df.copy()
-
-    return df[
-        df["hours"] >= min_hours
-    ].copy()
-
-
-def add_speed_traces(
-    fig,
-    row,
-    data,
-    street,
-    is_comparison=False,
-):
-    if data is None or data.empty:
-        return
-
-    base = (
-        COMPARE_STREET_COLOR
-        if is_comparison
-        else MAIN_STREET_COLOR
-    )
-
-    trend = (
-        COMPARE_TREND_COLOR
-        if is_comparison
-        else MAIN_TREND_COLOR
-    )
-
-    # In unified hover toont alleen V50 de gedeelde metadata.
-    # Zo worden periode en aantal auto's slechts één keer vermeld.
-    speed_customdata = data[["cars"]]
-
-    v50_hover = (
-        "V50: %{y:.1f} km/u"
-        "<extra></extra>"
-    )
-
-    fig.add_trace(
-        go.Scatter(
-            x=data["x"],
-            y=data["v50"],
-            mode="lines+markers",
-            connectgaps=False,
-            name=f"{street} V50",
-            line=dict(
-                color=base,
-                width=2,
-            ),
-            marker=dict(
-                size=4,
-                color=base,
-            ),
-            customdata=speed_customdata,
-            hovertemplate=v50_hover,
-        ),
-        row=row,
-        col=1,
-    )
-
-    fig.add_trace(
-        go.Scatter(
-            x=data["x"],
-            y=data["v85"],
-            mode="lines+markers",
-            connectgaps=False,
-            name=f"{street} V85",
-            line=dict(
-                color=trend,
-                width=2.8,
-            ),
-            marker=dict(
-                size=4,
-                color=trend,
-            ),
-            hovertemplate=(
-                "V85: %{y:.1f} km/u"
-                "<extra></extra>"
-            ),
-        ),
-        row=row,
-        col=1,
-    )
-
-    fig.add_trace(
-        go.Scatter(
-            x=data["x"],
-            y=data["v95"],
-            mode="lines+markers",
-            connectgaps=False,
-            name=f"{street} V95",
-            line=dict(
-                color=base,
-                width=1.5,
-                dash="dash",
-            ),
-            marker=dict(
-                size=4,
-                color=base,
-            ),
-            hovertemplate=(
-                "V95: %{y:.1f} km/u"
-                "<extra></extra>"
-            ),
-        ),
-        row=row,
-        col=1,
-    )
-
-
-    metadata_hover = (
-        "Auto's in verdeling: %{customdata[0]:,.0f}"
-        "<extra></extra>"
-    )
-
-    fig.add_trace(
-        go.Scatter(
-            x=data["x"],
-            y=data["v50"],
-            mode="markers",
-            marker=dict(
-                size=0.1,
-                opacity=0,
-            ),
-            showlegend=False,
-            customdata=speed_customdata,
-            hovertemplate=metadata_hover,
-        ),
-        row=row,
-        col=1,
-    )
 
 
 # ============================================================
