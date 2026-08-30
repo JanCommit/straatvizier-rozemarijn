@@ -18,7 +18,7 @@ IVORY = "#F4F1E8"
 SAGE = "#C7D0C2"
 
 LOCAL_TIMEZONE = "Europe/Brussels"
-APP_VERSION = "0.8.28"
+APP_VERSION = "0.8.29"
 
 PROJECT_ROOT = Path(__file__).resolve().parent
 SRC_DIR = PROJECT_ROOT / "src"
@@ -75,6 +75,12 @@ from straatvizier.traffic_helpers import (
     requested_directions,
     traffic_label_for,
     mode_flags,
+)
+
+from straatvizier.period_state import (
+    initialize_period_state,
+    apply_period_state,
+    reset_period_state,
 )
 
 from straatvizier.traffic_hover_helpers import (
@@ -670,41 +676,27 @@ period_max = max(
 
 # De datumwidget is een "conceptperiode". De grafieken gebruiken pas
 # de toegepaste periode nadat de gebruiker expliciet op de knop klikt.
-period_signature = (
-    selected_street,
-    comparison_street if compare else None,
-    period_min,
-    period_max,
+initialize_period_state(
+    selected_street=selected_street,
+    comparison_street=comparison_street,
+    compare=compare,
+    period_min=period_min,
+    period_max=period_max,
 )
-
-if st.session_state.get("period_signature") != period_signature:
-    st.session_state["period_signature"] = period_signature
-    st.session_state["selected_period"] = (
-        period_min,
-        period_max,
-    )
-    st.session_state["applied_period"] = (
-        period_min,
-        period_max,
-    )
 
 
 def apply_selected_period():
-    selected = st.session_state.get(
-        "selected_period",
-        (period_min, period_max),
-    )
-    if isinstance(selected, (tuple, list)) and len(selected) == 2:
-        st.session_state["applied_period"] = tuple(selected)
-
-
-def reset_selected_period():
-    full_period = (
+    apply_period_state(
         period_min,
         period_max,
     )
-    st.session_state["selected_period"] = full_period
-    st.session_state["applied_period"] = full_period
+
+
+def reset_selected_period():
+    reset_period_state(
+        period_min,
+        period_max,
+    )
 
 
 st.sidebar.date_input(
