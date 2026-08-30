@@ -1,3 +1,5 @@
+"""Beheer van geselecteerde en toegepaste perioden in Streamlit session state."""
+
 import streamlit as st
 
 
@@ -8,6 +10,8 @@ def initialize_period_state(
     period_min,
     period_max,
 ):
+    """Initialiseer de periode opnieuw wanneer straat of beschikbare grenzen wijzigen."""
+    # Reset alleen wanneer de straatcontext of beschikbare databounds wijzigen.
     period_signature = (
         selected_street,
         comparison_street if compare else None,
@@ -31,6 +35,7 @@ def apply_period_state(
     period_min,
     period_max,
 ):
+    """Kopieer de huidige selectie naar de periode die de grafiek werkelijk gebruikt."""
     selected = st.session_state.get(
         "selected_period",
         (period_min, period_max),
@@ -43,6 +48,7 @@ def reset_period_state(
     period_min,
     period_max,
 ):
+    """Herstel geselecteerde en toegepaste periode naar het volledige bereik."""
     full_period = (
         period_min,
         period_max,

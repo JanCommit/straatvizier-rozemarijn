@@ -1,3 +1,5 @@
+"""Lees straatgebonden richtinglabels en sensorhistoriek uit segments.yaml."""
+
 from pathlib import Path
 
 import yaml
@@ -7,6 +9,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 
 def load_direction_config():
+    """Lees per Telraam-segment richtinglabels en optionele sensorhistoriek."""
     config_path = PROJECT_ROOT / "config" / "segments.yaml"
 
     if not config_path.exists():
@@ -29,6 +32,7 @@ DIRECTION_CONFIG = load_direction_config()
 
 
 def direction_label(street, direction):
+    """Geef het leesbare, straatafhankelijke label voor een interne richting."""
     labels = DIRECTION_CONFIG.get(street, {})
 
     if direction == "ab":
@@ -41,6 +45,7 @@ def direction_label(street, direction):
 
 
 def sensor_history_label(street):
+    """Formatteer de bekende sensorperioden van een segment voor de UI."""
     history = DIRECTION_CONFIG.get(
         street,
         {},

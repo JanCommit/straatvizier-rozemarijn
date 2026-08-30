@@ -1,3 +1,5 @@
+"""Bereid snelheidsdata en tijdlabels voor de verschillende dashboardviews voor."""
+
 import pandas as pd
 
 from straatvizier.database import (
@@ -21,6 +23,7 @@ def valid_daily_speed(
     df,
     min_hours,
 ):
+    """Behoud snelheidsdagen met minstens het vereiste aantal geldige uren."""
     if df.empty:
         return df.copy()
 
@@ -36,6 +39,7 @@ def speed_view_data(
     hour_profile,
     min_hours,
 ):
+    """Bouw de snelheidstabel die hoort bij de gekozen tijds- of profielweergave."""
     valid = valid_daily_speed(
         daily,
         min_hours,
@@ -199,6 +203,7 @@ def speed_time_hover_data(
     view_name,
     data,
 ):
+    """Maak per snelheidsview de centrale Nederlandse tijdlabels voor unified hover."""
     if data is None or data.empty:
         return pd.DataFrame(
             columns=["x", "label"]

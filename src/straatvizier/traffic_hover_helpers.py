@@ -1,3 +1,5 @@
+"""Bouw de centrale Nederlandse tijdsaanduiding voor verkeers-hoverlabels."""
+
 import pandas as pd
 
 from straatvizier.analysis import add_missing_days_as_gaps
@@ -16,6 +18,7 @@ from straatvizier.ui.chart_helpers import (
 )
 
 
+# Deze helper levert alleen tijdcontext; zichtbare traces leveren de waarden.
 def traffic_time_hover_data(
     view_name,
     daily,
@@ -24,6 +27,7 @@ def traffic_time_hover_data(
     hour_profile=None,
     min_hours=None,
 ):
+    """Geef per view de x-posities en Nederlandse tijdlabels voor unified hover."""
     if view_name == "Per uur":
         data = hourly_with_gaps(
             hourly

@@ -1,3 +1,5 @@
+"""Kernfuncties voor kwaliteitsfiltering en aggregatie van verkeersmetingen."""
+
 import pandas as pd
 
 

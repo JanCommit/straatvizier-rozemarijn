@@ -1,7 +1,10 @@
+"""Vertaal verkeerskeuzes uit de UI naar interne richtingen, labels en queryflags."""
+
 from straatvizier.analysis import MODES
 
 
 def requested_directions(direction_choice):
+    """Vertaal de Nederlandse richtingskeuze naar interne richtingcodes."""
     if direction_choice == "Richtingen apart tonen":
         return ["ab", "ba"]
 
@@ -14,6 +17,7 @@ def requested_directions(direction_choice):
     return ["both"]
 
 def traffic_label_for(labels):
+    """Maak een compact leesbaar label voor de geselecteerde vervoersmodi."""
     modes = [MODES[label] for label in labels]
 
     if set(modes) == {"car", "heavy"}:
@@ -25,6 +29,7 @@ def traffic_label_for(labels):
     return " + ".join(labels)
 
 def mode_flags(selected_modes):
+    """Zet geselecteerde interne modi om naar booleans voor database-RPC-aanroepen."""
     return {
         "include_car": "car" in selected_modes,
         "include_bike": "bike" in selected_modes,

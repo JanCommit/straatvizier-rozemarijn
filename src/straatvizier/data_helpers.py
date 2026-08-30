@@ -1,3 +1,5 @@
+"""Helpers die verkeersaggregaten omvormen tot complete grafiekreeksen, met expliciete gaten voor ontbrekende perioden."""
+
 import pandas as pd
 
 from straatvizier.analysis import (
@@ -10,6 +12,7 @@ LOCAL_TIMEZONE = "Europe/Brussels"
 
 
 def valid_daily(daily_df, min_hours):
+    """Behoud alleen dagen met minstens min_hours geldige meeturen."""
     if daily_df.empty:
         return daily_df.copy()
 
@@ -18,6 +21,7 @@ def valid_daily(daily_df, min_hours):
     ].copy()
 
 def weighted_avg_uptime(daily_df):
+    """Bereken gemiddelde uptime gewogen volgens het aantal geldige meeturen."""
     if daily_df.empty:
         return None
 
@@ -35,6 +39,7 @@ def weighted_avg_uptime(daily_df):
     )
 
 def weekly_data(daily_df, min_hours):
+    """Maak weekaggregaten en voeg ontbrekende kalenderweken als gaten toe."""
     result = weekly_average_daily_traffic(
         daily_df,
         min_hours_per_day=min_hours,
@@ -98,6 +103,7 @@ def weekly_data(daily_df, min_hours):
     return result
 
 def monthly_data(daily_df, min_hours):
+    """Maak maandaggregaten en voeg ontbrekende maanden als gaten toe."""
     result = monthly_average_daily_traffic(
         daily_df,
         min_hours_per_day=min_hours,
@@ -127,6 +133,7 @@ def monthly_data(daily_df, min_hours):
     )
 
 def yearly_data(daily_df, min_hours):
+    """Maak jaaraggregaten en voeg ontbrekende jaren als gaten toe."""
     result = yearly_average_daily_traffic(
         daily_df,
         min_hours_per_day=min_hours,
@@ -153,6 +160,7 @@ def yearly_data(daily_df, min_hours):
     )
 
 def hourly_with_gaps(hourly_df):
+    """Maak een volledige lokale uurindex zodat ontbrekende uren zichtbaar blijven."""
     if hourly_df.empty:
         return hourly_df.copy()
 
@@ -167,6 +175,8 @@ def hourly_with_gaps(hourly_df):
         "measured_at_local"
     )
 
+    # Een volledige uurindex maakt meetgaten expliciet als NaN, zodat Plotly
+    # geen misleidende lijn over ontbrekende uren tekent.
     full_range = pd.date_range(
         result["measured_at_local"].min(),
         result["measured_at_local"].max(),

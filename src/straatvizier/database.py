@@ -1,3 +1,5 @@
+"""Centrale datatoegang voor StraatVizier via Supabase, inclusief histogramgebaseerde snelheidsberekeningen."""
+
 import os
 from pathlib import Path
 
@@ -395,6 +397,7 @@ def speed_percentile(
 def _add_speed_percentiles(
     df: pd.DataFrame,
 ) -> pd.DataFrame:
+    """Voeg V50, V85 en V95 toe aan rijen met een gecombineerd snelheidshistogram."""
     if df.empty:
         return df
 
@@ -723,6 +726,7 @@ def aggregate_speed_period(
 def get_speed_week_profile(
     daily_df: pd.DataFrame,
 ) -> pd.DataFrame:
+    """Aggregeer geldige snelheidsdagen tot een profiel per weekdag."""
     if daily_df.empty:
         return pd.DataFrame()
 
@@ -755,6 +759,7 @@ def get_speed_week_profile(
 def get_speed_year_profile(
     daily_df: pd.DataFrame,
 ) -> pd.DataFrame:
+    """Aggregeer geldige snelheidsdagen tot een profiel per kalendermaand."""
     if daily_df.empty:
         return pd.DataFrame()
 
