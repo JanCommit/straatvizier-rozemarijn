@@ -19,7 +19,7 @@ IVORY = "#F4F1E8"
 SAGE = "#C7D0C2"
 
 LOCAL_TIMEZONE = "Europe/Brussels"
-APP_VERSION = "0.8.17"
+APP_VERSION = "0.8.18"
 
 PROJECT_ROOT = Path(__file__).resolve().parent
 SRC_DIR = PROJECT_ROOT / "src"
@@ -59,6 +59,15 @@ from straatvizier.ui.chart_helpers import (
     profile_hour_label,
     month_label,
     add_time_hover_carrier,
+)
+
+from straatvizier.data_helpers import (
+    valid_daily,
+    weighted_avg_uptime,
+    weekly_data,
+    monthly_data,
+    yearly_data,
+    hourly_with_gaps,
 )
 
 
@@ -493,183 +502,10 @@ def mode_flags(selected_modes):
     }
 
 
-def valid_daily(daily_df, min_hours):
-    if daily_df.empty:
-        return daily_df.copy()
-
-    return daily_df[
-        daily_df["hours"] >= min_hours
-    ].copy()
 
 
-def weighted_avg_uptime(daily_df):
-    if daily_df.empty:
-        return None
-
-    hours = daily_df["hours"].sum()
-
-    if not hours:
-        return None
-
-    return (
-        (
-            daily_df["avg_uptime"]
-            * daily_df["hours"]
-        ).sum()
-        / hours
-    )
 
 
-def weekly_data(daily_df, min_hours):
-    result = weekly_average_daily_traffic(
-        daily_df,
-        min_hours_per_day=min_hours,
-    )
-
-    if result.empty:
-        return result
-
-    result = result.copy()
-    result["week"] = pd.to_datetime(
-        result["week"]
-    )
-
-    full_weeks = pd.date_range(
-        result["week"].min(),
-        result["week"].max(),
-        freq="W-MON",
-    )
-
-    result = (
-        result
-        .set_index("week")
-        .reindex(full_weeks)
-        .rename_axis("week")
-        .reset_index()
-    )
-
-    month_names = {
-        1: "jan",
-        2: "feb",
-        3: "mrt",
-        4: "apr",
-        5: "mei",
-        6: "jun",
-        7: "jul",
-        8: "aug",
-        9: "sep",
-        10: "okt",
-        11: "nov",
-        12: "dec",
-    }
-
-    result["week_end"] = (
-        result["week"]
-        + pd.Timedelta(days=6)
-    )
-
-    result["week_period"] = result.apply(
-        lambda row: (
-            f"ma {row['week'].day} "
-            f"{month_names[row['week'].month]} – "
-            f"zo {row['week_end'].day} "
-            f"{month_names[row['week_end'].month]} "
-            f"{row['week_end'].year}"
-        )
-        if pd.notna(row["week"])
-        else "",
-        axis=1,
-    )
-
-    return result
-
-
-def monthly_data(daily_df, min_hours):
-    result = monthly_average_daily_traffic(
-        daily_df,
-        min_hours_per_day=min_hours,
-    )
-
-    if result.empty:
-        return result
-
-    result = result.copy()
-
-    result["month"] = pd.to_datetime(
-        result["month"]
-    )
-
-    full_months = pd.date_range(
-        result["month"].min(),
-        result["month"].max(),
-        freq="MS",
-    )
-
-    return (
-        result
-        .set_index("month")
-        .reindex(full_months)
-        .rename_axis("month")
-        .reset_index()
-    )
-
-
-def yearly_data(daily_df, min_hours):
-    result = yearly_average_daily_traffic(
-        daily_df,
-        min_hours_per_day=min_hours,
-    )
-
-    if result.empty:
-        return result
-
-    result = result.copy()
-    result["year"] = pd.to_datetime(result["year"])
-
-    full_years = pd.date_range(
-        result["year"].min(),
-        result["year"].max(),
-        freq="YS",
-    )
-
-    return (
-        result
-        .set_index("year")
-        .reindex(full_years)
-        .rename_axis("year")
-        .reset_index()
-    )
-
-
-def hourly_with_gaps(hourly_df):
-    if hourly_df.empty:
-        return hourly_df.copy()
-
-    result = hourly_df.copy()
-
-    result["measured_at_local"] = (
-        result["measured_at"]
-        .dt.tz_convert(LOCAL_TIMEZONE)
-    )
-
-    result = result.sort_values(
-        "measured_at_local"
-    )
-
-    full_range = pd.date_range(
-        result["measured_at_local"].min(),
-        result["measured_at_local"].max(),
-        freq="h",
-        tz=LOCAL_TIMEZONE,
-    )
-
-    return (
-        result
-        .set_index("measured_at_local")
-        .reindex(full_range)
-        .rename_axis("measured_at_local")
-        .reset_index()
-    )
 
 
 def add_view(
