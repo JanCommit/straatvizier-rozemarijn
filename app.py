@@ -18,7 +18,7 @@ IVORY = "#F4F1E8"
 SAGE = "#C7D0C2"
 
 LOCAL_TIMEZONE = "Europe/Brussels"
-APP_VERSION = "0.8.23"
+APP_VERSION = "0.8.24"
 
 PROJECT_ROOT = Path(__file__).resolve().parent
 SRC_DIR = PROJECT_ROOT / "src"
@@ -1144,11 +1144,6 @@ y_axis_from_zero = st.sidebar.checkbox(
     ),
 )
 
-
-st.sidebar.divider()
-st.sidebar.caption(f"StraatVizier v{APP_VERSION}")
-
-
 # ============================================================
 # Segmenten en beschikbare periodes
 # ============================================================
@@ -1337,6 +1332,8 @@ flags = mode_flags(
     selected_modes
 )
 
+st.sidebar.divider()
+st.sidebar.caption(f"StraatVizier v{APP_VERSION}")
 
 # ============================================================
 # Frozen header
