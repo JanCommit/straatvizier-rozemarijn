@@ -1,3 +1,5 @@
+"""Render de vaste dashboardheader met de actuele analysecontext."""
+
 import streamlit as st
 
 
@@ -21,6 +23,7 @@ def render_frozen_header(
     comparison_street,
     comparison_layout,
 ):
+    """Render de vaste header voor analyse-type, straatcontext en gekozen weergave."""
     comparison_note = (
         (
             f" · vergelijking met {comparison_street}"

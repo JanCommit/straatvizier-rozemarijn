@@ -1,3 +1,5 @@
+"""Bouw de volledige Plotly-figuur voor verkeersintensiteiten en straatvergelijkingen."""
+
 import pandas as pd
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
@@ -33,6 +35,7 @@ def build_traffic_figure(
     show_rolling,
     y_axis_from_zero,
 ):
+    """Bouw de complete verkeersfiguur, inclusief vergelijking, assen en hoverdragers."""
     comparison_overlay = (
         compare
         and comparison_layout == "Samen in één grafiek"

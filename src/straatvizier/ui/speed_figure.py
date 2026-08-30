@@ -1,3 +1,5 @@
+"""Bouw de volledige Plotly-figuur voor de autosnelheidsanalyse."""
+
 import pandas as pd
 from plotly.subplots import make_subplots
 
@@ -24,6 +26,7 @@ def build_speed_figure(
     overlay,
     speed_rows,
 ):
+    """Bouw de complete snelheidsfiguur voor één straat of een straatvergelijking."""
     speed_fig = make_subplots(
         rows=speed_rows,
         cols=1,

@@ -1,3 +1,5 @@
+"""Voeg zichtbare autosnelheidstraces en bijbehorende hovermetadata toe aan Plotly."""
+
 import plotly.graph_objects as go
 
 MAIN_STREET_COLOR = "#1E88E5"
@@ -10,6 +12,7 @@ def valid_daily_speed(
     df,
     min_hours,
 ):
+    """Beperk dagelijkse snelheidsdata tot dagen met voldoende geldige meeturen."""
     if df.empty:
         return df.copy()
 
@@ -25,6 +28,7 @@ def add_speed_traces(
     street,
     is_comparison=False,
 ):
+    """Voeg V50/V85/V95 en de benodigde hovermetadata voor één straat toe."""
     if data is None or data.empty:
         return
 

@@ -1,3 +1,5 @@
+"""Definieer de globale Streamlit-filters en vertaal ze naar applicatiekeuzes."""
+
 import streamlit as st
 
 from straatvizier.analysis import MODES
@@ -6,6 +8,7 @@ from straatvizier.traffic_helpers import requested_directions, traffic_label_for
 
 
 def render_global_filters(street_names, default_index):
+    """Render alle globale filters en geef de genormaliseerde keuzes aan app.py terug."""
     st.sidebar.header("Filters")
 
     selected_street = st.sidebar.selectbox(

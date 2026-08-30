@@ -1,3 +1,5 @@
+"""Voeg verkeersseries voor de gekozen tijdsweergave toe aan een Plotly-figuur."""
+
 import pandas as pd
 import plotly.graph_objects as go
 
@@ -39,6 +41,7 @@ def add_view(
     series_suffix=None,
     line_dash="solid",
 ):
+    """Voeg de verkeersreeks(en) voor één gekozen dashboardweergave toe."""
     street_color = (
         COMPARE_STREET_COLOR
         if is_comparison

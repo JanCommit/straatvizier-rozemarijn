@@ -1,3 +1,5 @@
+"""Gedeelde Nederlandse labels en Plotly-hoverhelpers voor StraatVizier-grafieken."""
+
 import pandas as pd
 import plotly.graph_objects as go
 
@@ -54,6 +56,7 @@ WEEKDAY_NAMES_NL = [
 
 
 def hour_period_label(value):
+    """Formatteer een timestamp als Nederlandse uurperiode voor de hover."""
     if pd.isna(value):
         return ""
 
@@ -67,6 +70,7 @@ def hour_period_label(value):
 
 
 def profile_hour_label(value):
+    """Formatteer een profieluur als leesbare uurperiode zonder datum."""
     if pd.isna(value):
         return ""
 
@@ -75,6 +79,7 @@ def profile_hour_label(value):
 
 
 def month_label(value):
+    """Geef de volledige Nederlandse maandnaam met jaar terug."""
     if pd.isna(value):
         return ""
 
@@ -88,6 +93,7 @@ def add_time_hover_carrier(
     x,
     labels,
 ):
+    """Voeg een onzichtbare trace toe die één centrale tijdstitel in unified hover levert."""
     if x is None or len(x) == 0:
         return
 
