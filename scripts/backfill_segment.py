@@ -1,3 +1,8 @@
+"""Backfill één vast Telraam-segment naar Supabase.
+
+Gericht hulpscript dat momenteel Rozemarijnstraat (segment 155073) gebruikt. Pas
+vaste segment- en periodeconstanten alleen bewust aan wanneer dit script opnieuw nodig is."""
+
 import os
 import time
 from datetime import datetime, timezone

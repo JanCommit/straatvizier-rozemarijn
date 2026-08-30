@@ -1,3 +1,8 @@
+"""Handmatig diagnostisch script voor analysefuncties op databasegegevens.
+
+Dit is geen geautomatiseerde pytest-test. Het voert rechtstreeks voorbeeldcode uit
+en kan daardoor verouderen wanneer de analyse- of database-API verandert."""
+
 from pathlib import Path
 import sys
 

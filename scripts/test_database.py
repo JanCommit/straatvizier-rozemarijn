@@ -1,3 +1,7 @@
+"""Voer een minimale handmatige controle van de StraatVizier-databaselaag uit.
+
+Dit is geen pytest-test; het roept ``get_streets`` rechtstreeks aan en print het resultaat."""
+
 from pathlib import Path
 import sys
 

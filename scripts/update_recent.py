@@ -1,3 +1,9 @@
+"""Werk de recente Telraam-data van alle geconfigureerde segmenten bij in Supabase.
+
+Dit is het reguliere updatescript dat ook door GitHub Actions wordt gebruikt. Het
+haalt bewust enkele dagen overlap opnieuw op zodat late of gecorrigeerde brondata
+via UPSERT kan worden bijgewerkt."""
+
 import os
 import time
 from datetime import datetime, timedelta, timezone

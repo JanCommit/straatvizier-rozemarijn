@@ -1,3 +1,8 @@
+"""Controleer handmatig of de Supabase-verbinding en segmentquery werken.
+
+Leest lokale omgevingsvariabelen, voert een eenvoudige query uit en print de respons.
+Het script schrijft geen gegevens."""
+
 import os
 
 from dotenv import load_dotenv

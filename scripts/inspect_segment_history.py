@@ -1,3 +1,8 @@
+"""Inspecteer de historische beschikbaarheid van één Telraam-segment via de API.
+
+Diagnostisch script met Rozemarijnstraat als vaste referentie. Het helpt bepalen
+over welke periodes daadwerkelijk segmentmetingen beschikbaar zijn."""
+
 import os
 import time
 from datetime import datetime, timezone

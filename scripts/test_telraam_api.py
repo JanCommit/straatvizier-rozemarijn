@@ -1,3 +1,8 @@
+"""Controleer handmatig een rechtstreekse Telraam API-oproep voor een voorbeeldsegment.
+
+Diagnostisch script voor API-key, requestformaat en bronrespons; het schrijft geen
+gegevens naar Supabase."""
+
 import os
 
 import requests

@@ -1,3 +1,8 @@
+"""Vul historische Telraam-verkeersdata vanaf 2020 aan in Supabase.
+
+Dit is het algemene backfillscript op basis van ``config/segments.yaml``. Het is
+bedoeld voor historische aanvulling en staat los van de dagelijkse recente update."""
+
 import os
 import time
 from datetime import datetime, timezone
