@@ -5,7 +5,6 @@ import pandas as pd
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import streamlit as st
-import yaml
 
 UI_PRIMARY = "#2E6F8E"
 MAIN_STREET_COLOR = "#1E88E5"
@@ -19,7 +18,7 @@ IVORY = "#F4F1E8"
 SAGE = "#C7D0C2"
 
 LOCAL_TIMEZONE = "Europe/Brussels"
-APP_VERSION = "0.8.19"
+APP_VERSION = "0.8.20"
 
 PROJECT_ROOT = Path(__file__).resolve().parent
 SRC_DIR = PROJECT_ROOT / "src"
@@ -74,6 +73,11 @@ from straatvizier.traffic_helpers import (
     requested_directions,
     traffic_label_for,
     mode_flags,
+)
+
+from straatvizier.segment_config import (
+    direction_label,
+    sensor_history_label,
 )
 
 
@@ -408,80 +412,6 @@ def add_speed_traces(
 # ============================================================
 # Helpers
 # ============================================================
-
-def load_direction_config():
-    config_path = PROJECT_ROOT / "config" / "segments.yaml"
-
-    if not config_path.exists():
-        return {}
-
-    with config_path.open("r", encoding="utf-8") as handle:
-        raw = yaml.safe_load(handle) or {}
-
-    return {
-        item["street"]: {
-            "ab": item.get("direction_ab_label", "A → B"),
-            "ba": item.get("direction_ba_label", "B → A"),
-            "sensor_history": item.get("sensor_history", []),
-        }
-        for item in raw.get("segments", [])
-    }
-
-
-DIRECTION_CONFIG = load_direction_config()
-
-
-def direction_label(street, direction):
-    labels = DIRECTION_CONFIG.get(street, {})
-
-    if direction == "ab":
-        return f'{labels.get("ab", "A → B")} (A → B)'
-
-    if direction == "ba":
-        return f'{labels.get("ba", "B → A")} (B → A)'
-
-    return "Beide richtingen"
-
-
-def sensor_history_label(street):
-    history = DIRECTION_CONFIG.get(
-        street,
-        {},
-    ).get(
-        "sensor_history",
-        [],
-    )
-
-    if not history:
-        return None
-
-    parts = []
-
-    for item in history:
-        sensor = item.get("sensor")
-        start = item.get("start")
-        end = item.get("end")
-
-        if start and end:
-            parts.append(
-                f"{sensor}: {start}–{end}"
-            )
-        elif start:
-            parts.append(
-                f"{sensor}: vanaf {start}"
-            )
-
-    return " · ".join(parts) if parts else None
-
-
-
-
-
-
-
-
-
-
 
 def add_view(
     fig,
