@@ -1,24 +1,20 @@
+"""StraatVizier Streamlit-applicatie.
+
+Dit bestand orkestreert de dashboardflow: globale filters, beschikbare
+meetperiode, gerichte data-ophaling, kwaliteitsfilters en de keuze tussen
+verkeersintensiteit en autosnelheid. Berekeningen en Plotly-details zitten
+zoveel mogelijk in gespecialiseerde modules onder ``src/straatvizier``.
+"""
+
 from pathlib import Path
 import sys
 
 import pandas as pd
-import plotly.graph_objects as go
-from plotly.subplots import make_subplots
 import streamlit as st
 
-UI_PRIMARY = "#2E6F8E"
-MAIN_STREET_COLOR = "#1E88E5"
-COMPARE_STREET_COLOR = "#80649A"
-MAIN_TREND_COLOR = "#E8655B"
-COMPARE_TREND_COLOR = "#6F5A8C"
-GRID_COLOR = "#D1D8DE"
-AXIS_TEXT_COLOR = "#3F4B55"
-SUBPLOT_TITLE_COLOR = "#365F6B"
-IVORY = "#F4F1E8"
-SAGE = "#C7D0C2"
 
 LOCAL_TIMEZONE = "Europe/Brussels"
-APP_VERSION = "0.8.30"
+APP_VERSION = "0.8.31"
 
 PROJECT_ROOT = Path(__file__).resolve().parent
 SRC_DIR = PROJECT_ROOT / "src"
@@ -27,12 +23,7 @@ if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
 from straatvizier.analysis import (
-    MODES,
-    weekly_average_daily_traffic,
     monthly_average_daily_traffic,
-    yearly_average_daily_traffic,
-    add_missing_days_as_gaps,
-    add_rolling_average,
 )
 
 from straatvizier.database import (
@@ -43,22 +34,9 @@ from straatvizier.database import (
     get_hour_profile,
     get_hourly_speed,
     get_daily_speed,
-    aggregate_speed_period,
     get_speed_hour_profile,
-    get_speed_week_profile,
-    get_speed_year_profile,
 )
 
-from straatvizier.ui.chart_helpers import (
-    MONTH_NAMES_NL,
-    MONTH_ABBR_NL,
-    WEEKDAY_ABBR_NL,
-    WEEKDAY_NAMES_NL,
-    hour_period_label,
-    profile_hour_label,
-    month_label,
-    add_time_hover_carrier,
-)
 
 from straatvizier.ui.header import render_frozen_header
 
@@ -67,15 +45,9 @@ from straatvizier.ui.sidebar import render_global_filters
 from straatvizier.data_helpers import (
     valid_daily,
     weighted_avg_uptime,
-    weekly_data,
-    monthly_data,
-    yearly_data,
-    hourly_with_gaps,
 )
 
 from straatvizier.traffic_helpers import (
-    requested_directions,
-    traffic_label_for,
     mode_flags,
 )
 
@@ -85,31 +57,19 @@ from straatvizier.period_state import (
     reset_period_state,
 )
 
-from straatvizier.traffic_hover_helpers import (
-    traffic_time_hover_data,
-)
 
-from straatvizier.ui.traffic_chart import (
-    add_view,
-)
 
 from straatvizier.ui.traffic_figure import (
     build_traffic_figure,
 )
 
-from straatvizier.segment_config import (
-    direction_label,
-    sensor_history_label,
-)
 
 from straatvizier.speed_helpers import (
     speed_view_data,
-    speed_time_hover_data,
 )
 
 from straatvizier.ui.speed_chart import (
     valid_daily_speed,
-    add_speed_traces,
 )
 
 from straatvizier.ui.speed_figure import (
@@ -125,7 +85,9 @@ st.set_page_config(
 
 
 # ============================================================
-# Cache
+# Gecachete database-oproepen
+# Streamlit voert het script bij widgetinteractie opnieuw uit. Deze wrappers
+# voorkomen identieke Supabase-oproepen gedurende maximaal 24 uur.
 # ============================================================
 
 @st.cache_data(
@@ -310,13 +272,9 @@ def cached_get_speed_hour_profile(
 
 
 # ============================================================
-# Helpers
-# ============================================================
-
-
-
-# ============================================================
 # Straten en globale filters
+# De sidebar vertaalt gebruikerskeuzes naar genormaliseerde waarden die de
+# rest van app.py gebruikt voor data-ophaling en visualisatie.
 # ============================================================
 
 streets = cached_get_streets()
@@ -365,6 +323,8 @@ default_index = (
 
 # ============================================================
 # Segmenten en beschikbare periodes
+# Bij vergelijking wordt de volledige beschikbare kalender-range van beide
+# straten gebruikt; elke straat kan binnen die range eigen meetgaten hebben.
 # ============================================================
 
 main_row = streets[
@@ -541,14 +501,9 @@ st.sidebar.divider()
 st.sidebar.caption(f"StraatVizier v{APP_VERSION}")
 
 # ============================================================
-# Frozen header
-# ============================================================
-
-
-
-
-# ============================================================
 # Autosnelheid
+# Deze tak stopt na het renderen van de snelheidsanalyse. Daardoor wordt de
+# verkeersdata verderop niet onnodig opgehaald wanneer snelheid gekozen is.
 # ============================================================
 
 if analysis_type == "Autosnelheid":
@@ -787,6 +742,8 @@ kunnen daarom ook de snelheidsverdeling beïnvloeden.
 
 # ============================================================
 # Dagelijkse aggregaten: altijd lichtgewicht
+# Dagdata vormt de basis voor de meeste verkeersweergaven en datakwaliteit.
+# Uurdata wordt verderop alleen geladen voor views die ze werkelijk nodig hebben.
 # ============================================================
 
 daily_main_by_direction = {}
@@ -879,6 +836,8 @@ render_frozen_header(
 
 # ============================================================
 # Weergave
+# De view bepaalt zowel de grafiekvorm als welke aanvullende datasets lazy
+# geladen moeten worden. Het voortschrijdend gemiddelde bestaat alleen per dag.
 # ============================================================
 
 views = [
@@ -935,6 +894,8 @@ if view == "Per dag":
 
 # ============================================================
 # Lazy loading zware weergaven
+# Gedetailleerde uurdata en 24u-profielen worden pas opgehaald wanneer de
+# gekozen view ze nodig heeft; dit houdt gewone dashboard-reruns lichter.
 # ============================================================
 
 hourly_main_by_direction = {}
@@ -1008,6 +969,8 @@ if view == "24u-profiel":
 
 # ============================================================
 # Plot
+# Vanaf hier is alle benodigde verkeersdata voorbereid. De gespecialiseerde
+# figure-module bepaalt traces, hovergedrag, assen en vergelijkingslayout.
 # ============================================================
 
 fig = build_traffic_figure(
@@ -1040,6 +1003,8 @@ st.plotly_chart(
 
 # ============================================================
 # Datakwaliteit
+# De tabel gebruikt dezelfde hoofdstraatdata en kwaliteitsdrempel als de grafiek,
+# zodat de gebruiker de dekking van de getoonde periode kan beoordelen.
 # ============================================================
 
 quality = monthly_average_daily_traffic(
