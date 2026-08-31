@@ -9,6 +9,42 @@ from straatvizier.traffic_helpers import requested_directions, traffic_label_for
 
 def render_global_filters(street_names, default_index):
     """Render alle globale filters en geef de genormaliseerde keuzes aan app.py terug."""
+    st.markdown(
+        """
+        <style>
+        section[data-testid="stSidebar"] {
+            background: #F3F7FA;
+        }
+
+        section[data-testid="stSidebar"] > div {
+            padding-top: 1.15rem;
+        }
+
+        section[data-testid="stSidebar"] h2 {
+            color: #365F6B;
+            font-size: 1.05rem;
+            margin-top: 0.35rem;
+            margin-bottom: 0.35rem;
+        }
+
+        .watpasseert-sidebar-brand {
+            color: #1E4E66;
+            font-size: 1.55rem;
+            font-weight: 700;
+            line-height: 1.1;
+            letter-spacing: -0.02em;
+            margin: 0 0 0.65rem 0;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    st.sidebar.markdown(
+        '<div class="watpasseert-sidebar-brand">WatPasseert?</div>',
+        unsafe_allow_html=True,
+    )
+
     st.sidebar.header("Filters")
 
     selected_street = st.sidebar.selectbox(
