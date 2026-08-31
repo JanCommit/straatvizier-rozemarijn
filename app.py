@@ -498,7 +498,7 @@ flags = mode_flags(
 )
 
 st.sidebar.divider()
-st.sidebar.caption(f"StraatVizier v{APP_VERSION}")
+st.sidebar.caption(f"WatPasseert? v{APP_VERSION}")
 
 # ============================================================
 # Autosnelheid
