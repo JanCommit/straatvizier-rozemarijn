@@ -3,7 +3,11 @@
 import streamlit as st
 
 from straatvizier.analysis import MODES
-from straatvizier.segment_config import direction_label, sensor_history_label
+from straatvizier.segment_config import (
+    direction_label,
+    sensor_history_label,
+    night_counts_start_date,
+)
 from straatvizier.traffic_helpers import requested_directions, traffic_label_for
 
 
@@ -22,17 +26,72 @@ def render_global_filters(street_names, default_index):
         value=False,
     )
 
+    analysis_type = st.sidebar.radio(
+        "Analyse",
+        ["Verkeersaantallen", "Autosnelheid"],
+        index=0,
+    )
+
+    main_night_start = (
+        night_counts_start_date(selected_street)
+        if analysis_type == "Verkeersaantallen"
+        else None
+    )
+
+    traffic_context = "Verkeer bij daglicht"
+
+    if analysis_type == "Verkeersaantallen":
+        traffic_context_options = [
+            "Verkeer bij daglicht",
+        ]
+
+        if main_night_start is not None:
+            traffic_context_options.append(
+                "Verkeer zonder daglicht (S2)"
+            )
+
+        traffic_context = st.sidebar.radio(
+            "Meetcontext",
+            traffic_context_options,
+            index=0,
+            help=(
+                "Kies daglichtverkeer met classificatie naar "
+                "vervoersmiddel, of ongeclassificeerde S2-detecties "
+                "bij onvoldoende daglicht. Beide meetcontexten worden "
+                "niet gecombineerd."
+            ),
+        )
+
     comparison_street = None
     comparison_layout = "Onder elkaar"
 
     if compare:
+        comparison_candidates = [
+            street
+            for street in street_names
+            if street != selected_street
+        ]
+
+        if (
+            analysis_type == "Verkeersaantallen"
+            and traffic_context == "Verkeer zonder daglicht (S2)"
+        ):
+            comparison_candidates = [
+                street
+                for street in comparison_candidates
+                if night_counts_start_date(street) is not None
+            ]
+
+        if not comparison_candidates:
+            st.sidebar.warning(
+                "Er is geen andere straat met bruikbare "
+                "S2-nachtdata beschikbaar."
+            )
+            st.stop()
+
         comparison_street = st.sidebar.selectbox(
             "Tweede straat",
-            [
-                street
-                for street in street_names
-                if street != selected_street
-            ],
+            comparison_candidates,
         )
 
         comparison_layout = st.sidebar.radio(
@@ -76,37 +135,70 @@ def render_global_filters(street_names, default_index):
                 f"{comparison_sensor_history}"
             )
 
-
-    analysis_type = st.sidebar.radio(
-        "Analyse",
-        ["Verkeersaantallen", "Autosnelheid"],
-        index=0,
-    )
-
     if analysis_type == "Verkeersaantallen":
-        mode_labels = st.sidebar.multiselect(
-            "Vervoersmiddelen",
-            list(MODES.keys()),
-            default=[
-                "Auto's",
-                "Zwaar verkeer",
-            ],
-        )
-
-        if not mode_labels:
-            st.warning(
-                "Selecteer minstens één vervoersmiddel."
+        comparison_night_start = (
+            night_counts_start_date(
+                comparison_street
             )
-            st.stop()
-
-        selected_modes = [
-            MODES[label]
-            for label in mode_labels
-        ]
-
-        traffic_label = traffic_label_for(
-            mode_labels
+            if compare
+            else None
         )
+
+        if traffic_context == "Verkeer bij daglicht":
+            mode_labels = st.sidebar.multiselect(
+                "Verkeer bij daglicht",
+                list(MODES.keys()),
+                default=[
+                    "Auto's",
+                    "Zwaar verkeer",
+                ],
+                help=(
+                    "Bij voldoende daglicht kan Telraam verkeer "
+                    "classificeren naar vervoersmiddel."
+                ),
+            )
+
+            if not mode_labels:
+                st.warning(
+                    "Selecteer minstens één vervoersmiddel "
+                    "voor verkeer bij daglicht."
+                )
+                st.stop()
+
+            selected_modes = [
+                MODES[label]
+                for label in mode_labels
+            ]
+            include_night = False
+            traffic_label = traffic_label_for(
+                mode_labels
+            )
+
+        else:
+            mode_labels = []
+            selected_modes = []
+            include_night = True
+            traffic_label = "Verkeer zonder daglicht (S2)"
+
+            st.sidebar.caption(
+                "S2-detecties bij onvoldoende daglicht worden "
+                "niet naar vervoersmiddel geclassificeerd."
+            )
+
+            if main_night_start is not None:
+                st.sidebar.caption(
+                    f"Nachtdata {selected_street}: vanaf "
+                    f"{main_night_start.strftime('%d/%m/%Y')}"
+                )
+
+            if (
+                compare
+                and comparison_night_start is not None
+            ):
+                st.sidebar.caption(
+                    f"Nachtdata {comparison_street}: vanaf "
+                    f"{comparison_night_start.strftime('%d/%m/%Y')}"
+                )
 
         direction_choice = st.sidebar.radio(
             "Richting",
@@ -167,6 +259,7 @@ def render_global_filters(street_names, default_index):
     else:
         mode_labels = ["Auto's"]
         selected_modes = ["car"]
+        include_night = False
         traffic_label = "Autosnelheid"
         direction_choice = "Beide richtingen"
         directions = ["both"]
@@ -176,20 +269,28 @@ def render_global_filters(street_names, default_index):
             "en niet per rijrichting."
         )
 
+    if (
+        analysis_type == "Verkeersaantallen"
+        and include_night
+    ):
+        default_hours = (0, 4)
+    else:
+        default_hours = (9, 16)
+
     start_hour, end_hour = st.sidebar.slider(
         "Uren",
         min_value=0,
         max_value=24,
-        value=(8, 18),
+        value=default_hours,
         step=1,
         help=(
-            "Andere uren kiezen wordt op aanvraag "
-            "opnieuw berekend. Bij een lange periode "
-            "kan dit iets langer duren."
+            "Standaard wordt voor verkeer bij daglicht 09:00–16:00 "
+            "gebruikt en voor verkeer zonder daglicht 00:00–04:00. "
+            "Andere uren kiezen wordt op aanvraag opnieuw berekend."
         ),
     )
 
-    if (start_hour, end_hour) != (8, 18):
+    if (start_hour, end_hour) != default_hours:
         st.sidebar.caption(
             "ⓘ Aangepaste uren: gegevens worden "
             "opnieuw server-side berekend."
@@ -239,6 +340,15 @@ def render_global_filters(street_names, default_index):
         ),
     )
 
+    show_data_quality = st.sidebar.checkbox(
+        "Toon datakwaliteitstabel",
+        value=False,
+        help=(
+            "Toon onder de grafiek de datadekking "
+            "voor de gekozen weergave."
+        ),
+    )
+
     return (
         selected_street,
         compare,
@@ -247,6 +357,7 @@ def render_global_filters(street_names, default_index):
         analysis_type,
         mode_labels,
         selected_modes,
+        include_night,
         traffic_label,
         direction_choice,
         directions,
@@ -256,4 +367,5 @@ def render_global_filters(street_names, default_index):
         min_uptime,
         min_hours,
         y_axis_from_zero,
+        show_data_quality,
     )

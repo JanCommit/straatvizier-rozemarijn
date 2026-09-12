@@ -43,8 +43,8 @@ def render_frozen_header(
             .sv-head {{
                 position: fixed;
                 top: 3.6rem;
-                left: 22rem;
-                right: 1.25rem;
+                left: 24.0rem;
+                right: 27.25rem;
                 z-index: 9999;
                 background: #2B2F33;
                 border: 1px solid #3A4046;

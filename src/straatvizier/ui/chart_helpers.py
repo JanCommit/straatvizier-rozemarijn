@@ -1,5 +1,7 @@
 """Gedeelde Nederlandse labels en Plotly-hoverhelpers voor StraatVizier-grafieken."""
 
+from numbers import Number
+
 import pandas as pd
 import plotly.graph_objects as go
 
@@ -93,7 +95,7 @@ def add_time_hover_carrier(
     x,
     labels,
 ):
-    """Voeg een onzichtbare trace toe die één centrale tijdstitel in unified hover levert."""
+    """Voeg één centrale tijdstitel bovenaan de unified hover toe."""
     if x is None or len(x) == 0:
         return
 
@@ -112,10 +114,63 @@ def add_time_hover_carrier(
         keep="first",
     )
 
+    subplot = fig.get_subplot(row, 1)
+    yaxis_name = subplot.yaxis.plotly_name
+    target_yaxis = (
+        "y"
+        if yaxis_name == "yaxis"
+        else yaxis_name.replace("yaxis", "y")
+    )
+
+    def normalize_x(value):
+        if pd.isna(value):
+            return None
+
+        if isinstance(value, Number):
+            return float(value)
+
+        try:
+            return pd.Timestamp(value).value
+        except (TypeError, ValueError):
+            return str(value)
+
+    carrier_y_by_x = {}
+
+    for trace in fig.data:
+        trace_yaxis = getattr(trace, "yaxis", None) or "y"
+
+        if trace_yaxis != target_yaxis:
+            continue
+
+        trace_x = getattr(trace, "x", None)
+        trace_y = getattr(trace, "y", None)
+
+        if trace_x is None or trace_y is None:
+            continue
+
+        for x_value, y_value in zip(trace_x, trace_y):
+            if pd.isna(x_value) or pd.isna(y_value):
+                continue
+
+            carrier_y_by_x.setdefault(
+                normalize_x(x_value),
+                y_value,
+            )
+
+    carrier_y = [
+        carrier_y_by_x.get(
+            normalize_x(x_value)
+        )
+        for x_value in carrier["x"]
+    ]
+
+    if not any(pd.notna(value) for value in carrier_y):
+        return
+
     fig.add_trace(
         go.Scatter(
             x=carrier["x"],
-            y=[0] * len(carrier),
+            y=carrier_y,
             mode="markers",
             marker=dict(
                 size=0.1,
@@ -131,3 +186,28 @@ def add_time_hover_carrier(
         row=row,
         col=1,
     )
+
+    # Plotly toont unified-hoverregels in tracevolgorde.
+    # Zet alleen deze onzichtbare tijdtrace vóór de echte traces
+    # van dezelfde subplot, zodat de tijdsaanduiding bovenaan staat.
+    carrier_trace = fig.data[-1]
+    other_traces = list(fig.data[:-1])
+
+    insert_at = next(
+        (
+            index
+            for index, trace in enumerate(other_traces)
+            if (getattr(trace, "yaxis", None) or "y")
+            == target_yaxis
+        ),
+        len(other_traces),
+    )
+
+    reordered = (
+        other_traces[:insert_at]
+        + [carrier_trace]
+        + other_traces[insert_at:]
+    )
+
+    fig.data = tuple(reordered)
+

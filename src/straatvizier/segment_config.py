@@ -74,3 +74,45 @@ def sensor_history_label(street):
             )
 
     return " · ".join(parts) if parts else None
+
+from datetime import datetime
+
+def sensor_start_date(street, sensor_type):
+    """Geef de startdatum van een sensortype voor een straat."""
+    history = DIRECTION_CONFIG.get(
+        street,
+        {},
+    ).get(
+        "sensor_history",
+        [],
+    )
+
+    for item in history:
+        if item.get("sensor") == sensor_type:
+            start = item.get("start")
+
+            if start:
+                return datetime.strptime(
+                    start,
+                    "%d/%m/%Y",
+                ).date()
+
+    return None
+
+NIGHT_COUNTS_START_DATE = datetime.strptime(
+    "15/06/2024",
+    "%d/%m/%Y",
+).date()
+
+
+def night_counts_start_date(street):
+    """Geef de effectieve startdatum voor S2-nachttellingen."""
+    s2_start = sensor_start_date(street, "S2")
+
+    if s2_start is None:
+        return None
+
+    return max(
+        s2_start,
+        NIGHT_COUNTS_START_DATE,
+    )

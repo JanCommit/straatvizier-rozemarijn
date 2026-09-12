@@ -72,6 +72,22 @@ def build_speed_figure(
         )
     )
 
+    add_speed_traces(
+        speed_fig,
+        1,
+        main_speed_plot,
+        selected_street,
+    )
+
+    if compare:
+        add_speed_traces(
+            speed_fig,
+            1 if overlay else 2,
+            compare_speed_plot,
+            comparison_street,
+            True,
+        )
+
     if overlay and compare:
         combined_speed_hover = pd.concat(
             [
@@ -105,22 +121,6 @@ def build_speed_figure(
                 compare_speed_hover["x"],
                 compare_speed_hover["label"],
             )
-
-    add_speed_traces(
-        speed_fig,
-        1,
-        main_speed_plot,
-        selected_street,
-    )
-
-    if compare:
-        add_speed_traces(
-            speed_fig,
-            1 if overlay else 2,
-            compare_speed_plot,
-            comparison_street,
-            True,
-        )
 
     speed_x_title = {
         "Per uur": "Tijd (per uur)",

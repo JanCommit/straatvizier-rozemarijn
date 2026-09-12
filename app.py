@@ -23,7 +23,9 @@ if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
 from straatvizier.analysis import (
+    weekly_average_daily_traffic,
     monthly_average_daily_traffic,
+    yearly_average_daily_traffic,
 )
 
 from straatvizier.database import (
@@ -41,6 +43,8 @@ from straatvizier.database import (
 from straatvizier.ui.header import render_frozen_header
 
 from straatvizier.ui.sidebar import render_global_filters
+
+from straatvizier.segment_config import night_counts_start_date
 
 from straatvizier.data_helpers import (
     valid_daily,
@@ -122,6 +126,8 @@ def cached_get_daily(
     include_bike: bool,
     include_heavy: bool,
     include_pedestrian: bool,
+    include_night: bool = False,
+    night_start_date: str | None = None,
 ):
     return get_daily_traffic(
         segment_id=segment_id,
@@ -135,6 +141,8 @@ def cached_get_daily(
         include_bike=include_bike,
         include_heavy=include_heavy,
         include_pedestrian=include_pedestrian,
+        include_night=include_night,
+        night_start_date=night_start_date,
     )
 
 
@@ -154,6 +162,8 @@ def cached_get_hourly(
     include_bike: bool,
     include_heavy: bool,
     include_pedestrian: bool,
+    include_night: bool = False,
+    night_start_date: str | None = None,
 ):
     return get_hourly_traffic(
         segment_id=segment_id,
@@ -167,6 +177,8 @@ def cached_get_hourly(
         include_bike=include_bike,
         include_heavy=include_heavy,
         include_pedestrian=include_pedestrian,
+        include_night=include_night,
+        night_start_date=night_start_date,
     )
 
 
@@ -186,6 +198,8 @@ def cached_get_hour_profile(
     include_bike: bool,
     include_heavy: bool,
     include_pedestrian: bool,
+    include_night: bool = False,
+    night_start_date: str | None = None,
 ):
     return get_hour_profile(
         segment_id=segment_id,
@@ -199,6 +213,8 @@ def cached_get_hour_profile(
         include_bike=include_bike,
         include_heavy=include_heavy,
         include_pedestrian=include_pedestrian,
+        include_night=include_night,
+        night_start_date=night_start_date,
     )
 
 
@@ -307,6 +323,7 @@ default_index = (
     analysis_type,
     mode_labels,
     selected_modes,
+    include_night,
     traffic_label,
     direction_choice,
     directions,
@@ -316,6 +333,7 @@ default_index = (
     min_uptime,
     min_hours,
     y_axis_from_zero,
+    show_data_quality,
 ) = render_global_filters(
     street_names,
     default_index,
@@ -333,6 +351,10 @@ main_row = streets[
 
 main_id = int(
     main_row["segment_id"]
+)
+
+main_night_start = night_counts_start_date(
+    selected_street
 )
 
 with st.spinner(
@@ -366,6 +388,7 @@ main_last = (
 comparison_id = None
 comparison_first = None
 comparison_last = None
+comparison_night_start = None
 
 if compare:
     comparison_row = streets[
@@ -375,6 +398,10 @@ if compare:
 
     comparison_id = int(
         comparison_row["segment_id"]
+    )
+
+    comparison_night_start = night_counts_start_date(
+        comparison_street
     )
 
     with st.spinner(
@@ -410,11 +437,30 @@ if compare:
     )
 
 
+# In S2-night mode, the usable measurement period starts only when
+# reliable night counts are available for the selected street.
+main_effective_first = (
+    max(main_first, main_night_start)
+    if include_night and main_night_start is not None
+    else main_first
+)
+
+comparison_effective_first = (
+    max(comparison_first, comparison_night_start)
+    if (
+        include_night
+        and comparison_first is not None
+        and comparison_night_start is not None
+    )
+    else comparison_first
+)
+
+
 period_min = min(
     date
     for date in [
-        main_first,
-        comparison_first,
+        main_effective_first,
+        comparison_effective_first,
     ]
     if date is not None
 )
@@ -493,9 +539,25 @@ if (
 
 start_date, end_date = selected_dates
 
+main_query_start = (
+    max(start_date, main_effective_first)
+    if include_night
+    else start_date
+)
+
+comparison_query_start = (
+    max(start_date, comparison_effective_first)
+    if (
+        include_night
+        and comparison_effective_first is not None
+    )
+    else start_date
+)
+
 flags = mode_flags(
     selected_modes
 )
+flags["include_night"] = include_night
 
 st.sidebar.divider()
 st.sidebar.caption(f"WatPasseert? v{APP_VERSION}")
@@ -755,12 +817,17 @@ with st.spinner(
     for direction in directions:
         daily_main_by_direction[direction] = cached_get_daily(
             segment_id=main_id,
-            start_date=start_date.isoformat(),
+            start_date=main_query_start.isoformat(),
             end_date=end_date.isoformat(),
             start_hour=start_hour,
             end_hour=end_hour,
             min_uptime=min_uptime,
             direction=direction,
+            night_start_date=(
+                main_night_start.isoformat()
+                if main_night_start is not None
+                else None
+            ),
             **flags,
         )
 
@@ -771,12 +838,17 @@ if compare:
         for direction in directions:
             daily_compare_by_direction[direction] = cached_get_daily(
                 segment_id=comparison_id,
-                start_date=start_date.isoformat(),
+                start_date=comparison_query_start.isoformat(),
                 end_date=end_date.isoformat(),
                 start_hour=start_hour,
                 end_hour=end_hour,
                 min_uptime=min_uptime,
                 direction=direction,
+                night_start_date=(
+                    comparison_night_start.isoformat()
+                    if comparison_night_start is not None
+                    else None
+                ),
                 **flags,
             )
 
@@ -826,7 +898,7 @@ render_frozen_header(
     uptime_pct=uptime_pct,
     min_hours=min_hours,
     direction_choice=direction_choice,
-    main_first=main_first,
+    main_first=main_effective_first,
     main_last=main_last,
     compare=compare,
     comparison_street=comparison_street,
@@ -914,12 +986,17 @@ if view == "Per uur":
         for direction in directions:
             hourly_main_by_direction[direction] = cached_get_hourly(
                 segment_id=main_id,
-                start_date=start_date.isoformat(),
+                start_date=main_query_start.isoformat(),
                 end_date=end_date.isoformat(),
                 start_hour=start_hour,
                 end_hour=end_hour,
                 min_uptime=min_uptime,
                 direction=direction,
+                night_start_date=(
+                    main_night_start.isoformat()
+                    if main_night_start is not None
+                    else None
+                ),
                 **flags,
             )
 
@@ -928,12 +1005,17 @@ if view == "Per uur":
             for direction in directions:
                 hourly_compare_by_direction[direction] = cached_get_hourly(
                     segment_id=comparison_id,
-                    start_date=start_date.isoformat(),
+                    start_date=comparison_query_start.isoformat(),
                     end_date=end_date.isoformat(),
                     start_hour=start_hour,
                     end_hour=end_hour,
                     min_uptime=min_uptime,
                     direction=direction,
+                    night_start_date=(
+                        comparison_night_start.isoformat()
+                        if comparison_night_start is not None
+                        else None
+                    ),
                     **flags,
                 )
 
@@ -943,12 +1025,17 @@ if view == "24u-profiel":
         for direction in directions:
             hour_profile_main_by_direction[direction] = cached_get_hour_profile(
                 segment_id=main_id,
-                start_date=start_date.isoformat(),
+                start_date=main_query_start.isoformat(),
                 end_date=end_date.isoformat(),
                 start_hour=start_hour,
                 end_hour=end_hour,
                 min_uptime=min_uptime,
                 direction=direction,
+                night_start_date=(
+                    main_night_start.isoformat()
+                    if main_night_start is not None
+                    else None
+                ),
                 **flags,
             )
 
@@ -957,12 +1044,17 @@ if view == "24u-profiel":
             for direction in directions:
                 hour_profile_compare_by_direction[direction] = cached_get_hour_profile(
                     segment_id=comparison_id,
-                    start_date=start_date.isoformat(),
+                    start_date=comparison_query_start.isoformat(),
                     end_date=end_date.isoformat(),
                     start_hour=start_hour,
                     end_hour=end_hour,
                     min_uptime=min_uptime,
                     direction=direction,
+                    night_start_date=(
+                        comparison_night_start.isoformat()
+                        if comparison_night_start is not None
+                        else None
+                    ),
                     **flags,
                 )
 
@@ -1003,14 +1095,8 @@ st.plotly_chart(
 
 # ============================================================
 # Datakwaliteit
-# De tabel gebruikt dezelfde hoofdstraatdata en kwaliteitsdrempel als de grafiek,
-# zodat de gebruiker de dekking van de getoonde periode kan beoordelen.
+# Optioneel: toon de datadekking in dezelfde tijdsindeling als de actieve view.
 # ============================================================
-
-quality = monthly_average_daily_traffic(
-    daily_main,
-    min_hours_per_day=min_hours,
-)
 
 st.divider()
 
@@ -1048,54 +1134,191 @@ Bij straten met tramverkeer kan Telraam trams als **zwaar verkeer**
 classificeren. Een richtingswaarde voor zwaar verkeer is daarom niet
 automatisch uitsluitend vrachtverkeer.
 
-De datakwaliteit hieronder helpt om de dekking van de gekozen periode
-te beoordelen.
+Schakel **Toon datakwaliteitstabel** in de sidebar in om de dekking
+van de gekozen periode te bekijken.
         """
     )
 
-st.subheader(
-    f"Datakwaliteit per maand — {selected_street}"
-)
+if show_data_quality:
+    valid_quality = daily_main[
+        daily_main["hours"] >= min_hours
+    ].copy()
 
-if quality.empty:
-    st.info(
-        "Geen maandgegevens beschikbaar "
-        "voor de gekozen filters."
+    if view in {"Per uur", "Per dag", "24u-profiel"}:
+        quality_label = "dag"
+        quality = valid_quality.copy()
+        if not quality.empty:
+            quality = quality.rename(
+                columns={
+                    "date": "period",
+                    "value": "avg_daily_traffic",
+                    "hours": "valid_hours",
+                }
+            )
+            quality["valid_days"] = 1
+
+    elif view == "Per week":
+        quality_label = "week"
+        quality = weekly_average_daily_traffic(
+            daily_main,
+            min_hours_per_day=min_hours,
+        )
+        if not quality.empty:
+            quality = quality.rename(columns={"week": "period"})
+
+    elif view in {"Per maand", "Jaarprofiel"}:
+        quality_label = "maand"
+        quality = monthly_average_daily_traffic(
+            daily_main,
+            min_hours_per_day=min_hours,
+        )
+        if not quality.empty:
+            quality = quality.rename(columns={"month": "period"})
+
+    elif view == "Per jaar":
+        quality_label = "jaar"
+        quality = yearly_average_daily_traffic(
+            daily_main,
+            min_hours_per_day=min_hours,
+        )
+        if not quality.empty:
+            quality = quality.rename(columns={"year": "period"})
+
+    else:  # Weekprofiel
+        quality_label = "weekdag"
+        quality = valid_quality.copy()
+        if not quality.empty:
+            quality["period"] = quality["date"].dt.dayofweek
+            quality = (
+                quality
+                .groupby("period", as_index=False)
+                .agg(
+                    avg_daily_traffic=("value", "mean"),
+                    valid_days=("date", "count"),
+                    avg_uptime=("avg_uptime", "mean"),
+                )
+            )
+
+    st.subheader(
+        f"Datakwaliteit per {quality_label} — {selected_street}"
     )
 
-else:
-    quality_df = quality.copy()
+    if quality.empty:
+        st.info(
+            "Geen datakwaliteitsgegevens beschikbaar "
+            "voor de gekozen filters."
+        )
+    else:
+        quality_df = quality.copy()
 
-    quality_df["month"] = (
-        quality_df["month"]
-        .dt.strftime("%Y-%m")
-    )
+        if quality_label == "dag":
+            quality_df["period"] = pd.to_datetime(
+                quality_df["period"]
+            ).dt.strftime("%d/%m/%Y")
+            quality_df = quality_df[
+                [
+                    "period",
+                    "valid_hours",
+                    "avg_uptime",
+                ]
+            ]
+            rename_columns = {
+                "period": "Dag",
+                "valid_hours": "Geldige uren",
+                "avg_uptime": "Gem. uptime (%)",
+            }
 
-    quality_df["avg_uptime"] = (
-        quality_df["avg_uptime"]
-        * 100
-    ).round(1)
+        elif quality_label == "week":
+            week_start = pd.to_datetime(quality_df["period"])
+            week_end = week_start + pd.Timedelta(days=6)
+            quality_df["period"] = (
+                week_start.dt.strftime("%d/%m/%Y")
+                + " – "
+                + week_end.dt.strftime("%d/%m/%Y")
+            )
+            quality_df = quality_df[
+                [
+                    "period",
+                    "valid_days",
+                    "avg_uptime",
+                ]
+            ]
+            rename_columns = {
+                "period": "Week",
+                "valid_days": "Geldige dagen",
+                "avg_uptime": "Gem. uptime (%)",
+            }
 
-    quality_df["avg_daily_traffic"] = (
-        quality_df["avg_daily_traffic"]
-        .round(0)
-        .astype(int)
-    )
+        elif quality_label == "maand":
+            quality_df["period"] = pd.to_datetime(
+                quality_df["period"]
+            ).dt.strftime("%Y-%m")
+            quality_df = quality_df[
+                [
+                    "period",
+                    "valid_days",
+                    "avg_uptime",
+                ]
+            ]
+            rename_columns = {
+                "period": "Maand",
+                "valid_days": "Geldige dagen",
+                "avg_uptime": "Gem. uptime (%)",
+            }
 
-    quality_df = quality_df.rename(
-        columns={
-            "month": "Maand",
-            "avg_daily_traffic":
-                f"Gem. {traffic_label.lower()}/dag",
-            "valid_days":
-                "Geldige dagen",
-            "avg_uptime":
-                "Gem. uptime (%)",
-        }
-    )
+        elif quality_label == "jaar":
+            quality_df["period"] = pd.to_datetime(
+                quality_df["period"]
+            ).dt.strftime("%Y")
+            quality_df = quality_df[
+                [
+                    "period",
+                    "valid_days",
+                    "avg_uptime",
+                ]
+            ]
+            rename_columns = {
+                "period": "Jaar",
+                "valid_days": "Geldige dagen",
+                "avg_uptime": "Gem. uptime (%)",
+            }
 
-    st.dataframe(
-        quality_df,
-        use_container_width=True,
-        hide_index=True,
-    )
+        else:
+            weekday_names = [
+                "Maandag",
+                "Dinsdag",
+                "Woensdag",
+                "Donderdag",
+                "Vrijdag",
+                "Zaterdag",
+                "Zondag",
+            ]
+            quality_df["period"] = quality_df["period"].map(
+                dict(enumerate(weekday_names))
+            )
+            quality_df = quality_df[
+                [
+                    "period",
+                    "valid_days",
+                    "avg_uptime",
+                ]
+            ]
+            rename_columns = {
+                "period": "Weekdag",
+                "valid_days": "Geldige dagen",
+                "avg_uptime": "Gem. uptime (%)",
+            }
+
+        quality_df["avg_uptime"] = (
+            quality_df["avg_uptime"] * 100
+        ).round(1)
+
+        quality_df = quality_df.rename(
+            columns=rename_columns
+        )
+
+        st.dataframe(
+            quality_df,
+            use_container_width=True,
+            hide_index=True,
+        )

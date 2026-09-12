@@ -113,6 +113,8 @@ def get_daily_traffic(
     include_bike: bool,
     include_heavy: bool,
     include_pedestrian: bool,
+    include_night: bool = False,
+    night_start_date: str | None = None,
 ) -> pd.DataFrame:
     """
     Laat Postgres dagtotalen berekenen.
@@ -142,6 +144,8 @@ def get_daily_traffic(
                     "p_include_bike": include_bike,
                     "p_include_heavy": include_heavy,
                     "p_include_pedestrian": include_pedestrian,
+                    "p_include_night": include_night,
+                    "p_night_start_date": night_start_date,
                 },
             )
             .range(
@@ -201,6 +205,8 @@ def get_hourly_traffic(
     include_bike: bool,
     include_heavy: bool,
     include_pedestrian: bool,
+    include_night: bool = False,
+    night_start_date: str | None = None,
 ) -> pd.DataFrame:
     """
     Lees gefilterde uurdata op aanvraag.
@@ -230,6 +236,8 @@ def get_hourly_traffic(
                     "p_include_bike": include_bike,
                     "p_include_heavy": include_heavy,
                     "p_include_pedestrian": include_pedestrian,
+                    "p_include_night": include_night,
+                    "p_night_start_date": night_start_date,
                 },
             )
             .range(
@@ -286,6 +294,8 @@ def get_hour_profile(
     include_bike: bool,
     include_heavy: bool,
     include_pedestrian: bool,
+    include_night: bool = False,
+    night_start_date: str | None = None,
 ) -> pd.DataFrame:
     """
     Bereken het uurprofiel server-side.
@@ -309,6 +319,8 @@ def get_hour_profile(
                 "p_include_bike": include_bike,
                 "p_include_heavy": include_heavy,
                 "p_include_pedestrian": include_pedestrian,
+                "p_include_night": include_night,
+                "p_night_start_date": night_start_date,
             },
         )
         .execute()

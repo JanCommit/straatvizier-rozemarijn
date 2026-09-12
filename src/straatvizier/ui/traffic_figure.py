@@ -122,41 +122,6 @@ def build_traffic_figure(
         )
     )
 
-    if comparison_overlay and compare:
-        combined_time_hover = pd.concat(
-            [
-                main_time_hover,
-                compare_time_hover,
-            ],
-            ignore_index=True,
-        ).drop_duplicates(
-            subset=["x"],
-            keep="first",
-        )
-
-        add_time_hover_carrier(
-            fig,
-            1,
-            combined_time_hover["x"],
-            combined_time_hover["label"],
-        )
-    else:
-        add_time_hover_carrier(
-            fig,
-            1,
-            main_time_hover["x"],
-            main_time_hover["label"],
-        )
-
-        if compare and rows == 2:
-            add_time_hover_carrier(
-                fig,
-                2,
-                compare_time_hover["x"],
-                compare_time_hover["label"],
-            )
-
-
     y_label = None
 
     for direction in directions:
@@ -223,6 +188,40 @@ def build_traffic_figure(
                 line_dash=dash,
             )
 
+
+    if comparison_overlay and compare:
+        combined_time_hover = pd.concat(
+            [
+                main_time_hover,
+                compare_time_hover,
+            ],
+            ignore_index=True,
+        ).drop_duplicates(
+            subset=["x"],
+            keep="first",
+        )
+
+        add_time_hover_carrier(
+            fig,
+            1,
+            combined_time_hover["x"],
+            combined_time_hover["label"],
+        )
+    else:
+        add_time_hover_carrier(
+            fig,
+            1,
+            main_time_hover["x"],
+            main_time_hover["label"],
+        )
+
+        if compare and rows == 2:
+            add_time_hover_carrier(
+                fig,
+                2,
+                compare_time_hover["x"],
+                compare_time_hover["label"],
+            )
 
     # Forceer de secundaire y-assen om zichtbaar te worden.
     # Zonder een trace op secondary_y laat Plotly de rechter ticklabels soms weg.
