@@ -388,7 +388,7 @@ def render_global_filters(street_names, default_index):
     with st.sidebar.expander("DATA & SENSOREN", expanded=False):
         main_sensor_history = sensor_history_label(selected_street)
         if main_sensor_history:
-            st.caption(
+            st.markdown(
                 f"Sensor {selected_street}: {main_sensor_history}"
             )
 
@@ -397,13 +397,13 @@ def render_global_filters(street_names, default_index):
                 comparison_street
             )
             if comparison_sensor_history:
-                st.caption(
+                st.markdown(
                     f"Sensor {comparison_street}: "
                     f"{comparison_sensor_history}"
                 )
 
         if main_night_start is not None:
-            st.caption(
+            st.markdown(
                 f"Nachtdata {selected_street}: vanaf "
                 f"{main_night_start.strftime('%d/%m/%Y')}"
             )
@@ -413,12 +413,12 @@ def render_global_filters(street_names, default_index):
                 comparison_street
             )
             if comparison_night_start_info is not None:
-                st.caption(
+                st.markdown(
                     f"Nachtdata {comparison_street}: vanaf "
                     f"{comparison_night_start_info.strftime('%d/%m/%Y')}"
                 )
 
-        st.caption(
+        st.markdown(
             "S2-detecties bij onvoldoende daglicht worden "
             "niet naar vervoersmiddel geclassificeerd."
         )
