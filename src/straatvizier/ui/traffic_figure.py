@@ -135,7 +135,11 @@ def build_traffic_figure(
                 else None
             )
         )
-        dash = "solid" if direction in {"both", "ab"} else "dash"
+        direction_variant = (
+            "secondary"
+            if split and direction == "ba"
+            else "primary"
+        )
 
         current_label = add_view(
             fig=fig,
@@ -151,7 +155,8 @@ def build_traffic_figure(
             hourly=hourly_main_by_direction.get(direction),
             hour_profile=hour_profile_main_by_direction.get(direction),
             series_suffix=suffix,
-            line_dash=dash,
+            line_dash="solid",
+            direction_variant=direction_variant,
         )
 
         y_label = y_label or current_label
@@ -168,7 +173,11 @@ def build_traffic_figure(
                     else None
                 )
             )
-            dash = "solid" if direction in {"both", "ab"} else "dash"
+            direction_variant = (
+                "secondary"
+                if split and direction == "ba"
+                else "primary"
+            )
 
             add_view(
                 fig=fig,
@@ -185,7 +194,8 @@ def build_traffic_figure(
                 hour_profile=hour_profile_compare_by_direction.get(direction),
                 is_comparison=True,
                 series_suffix=suffix,
-                line_dash=dash,
+                line_dash="solid",
+                direction_variant=direction_variant,
             )
 
 

@@ -18,19 +18,28 @@ def render_global_filters(street_names, default_index):
         st.sidebar.markdown(
             f"""
             <div style="
-                margin-top: 1.15rem;
-                margin-bottom: 0.55rem;
-                padding-bottom: 0.28rem;
-                border-bottom: 1px solid rgba(128, 128, 128, 0.28);
-                font-size: 0.82rem;
-                font-weight: 700;
-                letter-spacing: 0.045em;
+                margin-top: 1.25rem;
+                margin-bottom: 0.58rem;
+                padding-bottom: 0.32rem;
+                border-bottom: 1px solid rgba(40, 122, 139, 0.22);
+                color: #287A8B;
+                font-size: 0.78rem;
+                font-weight: 750;
+                letter-spacing: 0.065em;
             ">
                 {label}
             </div>
             """,
             unsafe_allow_html=True,
         )
+
+    # ========================================================
+    # LOGO
+    # ========================================================
+    st.sidebar.image(
+        "assets/watpasseert-logo.png",
+        use_container_width=True,
+    )
 
     # ========================================================
     # STRAATSELECTIE

@@ -3,8 +3,9 @@
 import streamlit as st
 
 
-IVORY = "#F4F1E8"
-SAGE = "#C7D0C2"
+IVORY = "#F7F8F7"
+PETROL = "#6DB7C4"
+PETROL_STRONG = "#287A8B"
 
 
 
@@ -78,18 +79,18 @@ def render_frozen_header(
                 box-sizing: border-box;
                 background: linear-gradient(180deg, #2D3338 0%, #292E33 100%);
                 border: 1px solid rgba(255,255,255,.08);
-                border-radius: 12px;
-                padding: .82rem 1rem .72rem;
+                border-radius: 10px;
+                padding: .78rem 1rem .68rem;
                 margin-bottom: 1rem;
-                box-shadow: 0 7px 20px rgba(0,0,0,.13);
+                box-shadow: 0 6px 18px rgba(0,0,0,.11);
             }}
 
             .sv-title {{
-                font-size: 1.28rem;
+                font-size: 1.24rem;
                 font-weight: 700;
                 line-height: 1.2;
                 color: {IVORY};
-                margin: 0 0 .7rem 0;
+                margin: 0 0 .64rem 0;
                 letter-spacing: -.01em;
             }}
 
@@ -98,7 +99,7 @@ def render_frozen_header(
                 align-items: center;
                 flex-wrap: wrap;
                 gap: 0;
-                margin-bottom: .66rem;
+                margin-bottom: .60rem;
             }}
 
             .sv-metric {{
@@ -107,7 +108,7 @@ def render_frozen_header(
                 gap: .52rem;
                 padding: 0 1.3rem;
                 min-height: 2.45rem;
-                border-right: 1px solid rgba(199,208,194,.18);
+                border-right: 1px solid rgba(109,183,196,.20);
             }}
 
             .sv-metric:first-child {{
@@ -122,7 +123,7 @@ def render_frozen_header(
             .sv-icon {{
                 width: 1.02rem;
                 height: 1.02rem;
-                color: {SAGE};
+                color: {PETROL};
                 flex: 0 0 auto;
                 opacity: .95;
             }}
@@ -135,14 +136,14 @@ def render_frozen_header(
             }}
 
             .sv-label {{
-                font-size: .69rem;
-                color: {SAGE};
+                font-size: .68rem;
+                color: rgba(109,183,196,.92);
                 margin-bottom: .18rem;
                 white-space: nowrap;
             }}
 
             .sv-value {{
-                font-size: 1.01rem;
+                font-size: 1rem;
                 font-weight: 680;
                 color: {IVORY};
                 white-space: nowrap;
@@ -160,8 +161,8 @@ def render_frozen_header(
                 height: 1.42rem;
                 border-radius: 50%;
                 background: conic-gradient(
-                    #75B881 var(--uptime),
-                    rgba(117,184,129,.18) 0
+                    {PETROL_STRONG} var(--uptime),
+                    rgba(40,122,139,.20) 0
                 );
                 position: relative;
                 flex: 0 0 auto;
@@ -172,11 +173,11 @@ def render_frozen_header(
                 position: absolute;
                 inset: .23rem;
                 border-radius: 50%;
-                background: #2B3035;
+                background: #2D3338;
             }}
 
             .sv-uptime-empty {{
-                background: rgba(199,208,194,.18);
+                background: rgba(109,183,196,.20);
             }}
 
             .sv-spacer {{
@@ -184,10 +185,10 @@ def render_frozen_header(
             }}
 
             .sv-context {{
-                font-size: .78rem;
-                color: rgba(199,208,194,.88);
-                padding-top: .56rem;
-                border-top: 1px solid rgba(199,208,194,.12);
+                font-size: .76rem;
+                color: rgba(219,239,242,.82);
+                padding-top: .52rem;
+                border-top: 1px solid rgba(109,183,196,.18);
                 line-height: 1.35;
             }}
 

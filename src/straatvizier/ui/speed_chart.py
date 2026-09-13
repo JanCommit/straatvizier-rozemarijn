@@ -1,11 +1,14 @@
 """Voeg zichtbare autosnelheidstraces en bijbehorende hovermetadata toe aan Plotly."""
 
+import pandas as pd
 import plotly.graph_objects as go
 
-MAIN_STREET_COLOR = "#1E88E5"
+MAIN_STREET_COLOR = "#287A8B"
 COMPARE_STREET_COLOR = "#80649A"
-MAIN_TREND_COLOR = "#E8655B"
-COMPARE_TREND_COLOR = "#6F5A8C"
+
+# De V50–V95-band blijft duidelijk zichtbaar op verschillende schermen,
+# maar laat de V85-lijn visueel dominant.
+BAND_OPACITY = 0.28
 
 
 def valid_daily_speed(
@@ -38,43 +41,90 @@ def add_speed_traces(
         else MAIN_STREET_COLOR
     )
 
-    trend = (
-        COMPARE_TREND_COLOR
+    band_fill = (
+        f"rgba(128, 100, 154, {BAND_OPACITY})"
         if is_comparison
-        else MAIN_TREND_COLOR
+        else f"rgba(40, 122, 139, {BAND_OPACITY})"
     )
 
     # In unified hover toont alleen V50 de gedeelde metadata.
     # Zo worden periode en aantal auto's slechts één keer vermeld.
     speed_customdata = data[["cars"]]
 
-    v50_hover = (
-        "V50: %{y:.1f} km/u"
-        "<extra></extra>"
+    # Bouw de V50–V95-band per aaneengesloten blok geldige data.
+    # Plotly kan fill="tonexty" anders over NaN-gaten heen sluiten,
+    # wat bij uur-, dag- en weekreeksen diagonale driehoeken veroorzaakt.
+    band_valid = (
+        data["x"].notna()
+        & data["v50"].notna()
+        & data["v95"].notna()
     )
 
-    fig.add_trace(
-        go.Scatter(
-            x=data["x"],
-            y=data["v50"],
-            mode="lines+markers",
-            connectgaps=False,
-            name=f"{street} V50",
-            line=dict(
-                color=base,
-                width=2,
-            ),
-            marker=dict(
-                size=4,
-                color=base,
-            ),
-            customdata=speed_customdata,
-            hovertemplate=v50_hover,
-        ),
-        row=row,
-        col=1,
+    band_group = (
+        (~band_valid)
+        .cumsum()
     )
 
+    band_segments = [
+        segment
+        for _, segment in data[band_valid].groupby(
+            band_group[band_valid]
+        )
+        if not segment.empty
+    ]
+
+    for segment_index, segment in enumerate(band_segments):
+        show_band_legend = segment_index == 0
+
+        # Ondergrens van één aaneengesloten percentielband.
+        fig.add_trace(
+            go.Scatter(
+                x=segment["x"],
+                y=segment["v50"],
+                mode="lines",
+                connectgaps=False,
+                name=f"{street} V50",
+                line=dict(
+                    color=base,
+                    width=0,
+                ),
+                showlegend=False,
+                hovertemplate=(
+                    "V50: %{y:.1f} km/u"
+                    "<extra></extra>"
+                ),
+            ),
+            row=row,
+            col=1,
+        )
+
+        # Bovengrens vult alleen tot de vorige trace van hetzelfde segment.
+        # Daardoor kan de band nooit over een ontbrekende periode springen.
+        fig.add_trace(
+            go.Scatter(
+                x=segment["x"],
+                y=segment["v95"],
+                mode="lines",
+                connectgaps=False,
+                name=f"{street} V50–V95",
+                line=dict(
+                    color=base,
+                    width=0,
+                ),
+                fill="tonexty",
+                fillcolor=band_fill,
+                showlegend=show_band_legend,
+                legendgroup=f"{street}-speed-band",
+                hovertemplate=(
+                    "V95: %{y:.1f} km/u"
+                    "<extra></extra>"
+                ),
+            ),
+            row=row,
+            col=1,
+        )
+
+    # V85 blijft de enige duidelijke percentiellijn.
     fig.add_trace(
         go.Scatter(
             x=data["x"],
@@ -83,40 +133,15 @@ def add_speed_traces(
             connectgaps=False,
             name=f"{street} V85",
             line=dict(
-                color=trend,
+                color=base,
                 width=2.8,
             ),
             marker=dict(
                 size=4,
-                color=trend,
+                color=base,
             ),
             hovertemplate=(
                 "V85: %{y:.1f} km/u"
-                "<extra></extra>"
-            ),
-        ),
-        row=row,
-        col=1,
-    )
-
-    fig.add_trace(
-        go.Scatter(
-            x=data["x"],
-            y=data["v95"],
-            mode="lines+markers",
-            connectgaps=False,
-            name=f"{street} V95",
-            line=dict(
-                color=base,
-                width=1.5,
-                dash="dash",
-            ),
-            marker=dict(
-                size=4,
-                color=base,
-            ),
-            hovertemplate=(
-                "V95: %{y:.1f} km/u"
                 "<extra></extra>"
             ),
         ),

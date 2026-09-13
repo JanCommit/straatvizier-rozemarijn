@@ -11,7 +11,11 @@ from straatvizier.ui.chart_helpers import (
 from straatvizier.speed_helpers import speed_time_hover_data
 from straatvizier.ui.speed_chart import add_speed_traces
 
-GRID_COLOR = "#D1D8DE"
+GRID_COLOR = "#E1E6E7"
+AXIS_TEXT_COLOR = "#465158"
+SUBPLOT_TITLE_COLOR = "#287A8B"
+PLOT_BG_COLOR = "#FFFFFF"
+PAPER_BG_COLOR = "#FFFFFF"
 
 
 def build_speed_figure(
@@ -138,6 +142,16 @@ def build_speed_figure(
         unifiedhovertitle=dict(
             text="&#8203;",
         ),
+        tickfont=dict(
+            size=12,
+            color=AXIS_TEXT_COLOR,
+        ),
+        title_font=dict(
+            size=14,
+            color=AXIS_TEXT_COLOR,
+        ),
+        gridcolor="#EEF1F2",
+        gridwidth=.7,
     )
 
     if speed_view == "24u-profiel":
@@ -167,12 +181,31 @@ def build_speed_figure(
             "Autosnelheid (km/u)"
         ),
         gridcolor=GRID_COLOR,
+        gridwidth=1.0,
+        tickfont=dict(
+            size=13,
+            color=AXIS_TEXT_COLOR,
+        ),
+        title_font=dict(
+            size=14,
+            color=AXIS_TEXT_COLOR,
+        ),
+        zeroline=True,
+        zerolinecolor="#C8D0D3",
+        zerolinewidth=1.1,
         rangemode=(
             "tozero"
             if y_axis_from_zero
             else "normal"
         ),
     )
+
+    for annotation in speed_fig.layout.annotations:
+        annotation.font = dict(
+            size=17,
+            color=SUBPLOT_TITLE_COLOR,
+            family="Arial",
+        )
 
     speed_fig.update_layout(
         height=(
@@ -181,6 +214,12 @@ def build_speed_figure(
             else 520
         ),
         hovermode="x unified",
+        paper_bgcolor=PAPER_BG_COLOR,
+        plot_bgcolor=PLOT_BG_COLOR,
+        font=dict(
+            color=AXIS_TEXT_COLOR,
+            family="Arial",
+        ),
         margin=dict(
             t=(
                 45

@@ -87,6 +87,99 @@ st.set_page_config(
     layout="wide",
 )
 
+st.markdown(
+    """
+    <style>
+        :root {
+            --wp-petrol: #287A8B;
+            --wp-anthracite: #30383D;
+            --wp-page: #F7F8F7;
+            --wp-surface: #FFFFFF;
+            --wp-border: rgba(48, 56, 61, 0.12);
+        }
+
+        .stApp {
+            background: var(--wp-page);
+        }
+
+        [data-testid="stAppViewContainer"] {
+            background: var(--wp-page);
+        }
+
+        [data-testid="stHeader"] {
+            background: rgba(247, 248, 247, 0.94);
+        }
+
+        [data-testid="stSidebar"] {
+            background: #F2F5F4;
+            border-right: 1px solid var(--wp-border);
+        }
+
+        [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] a {
+            color: var(--wp-petrol);
+        }
+
+        [data-testid="stSidebar"] input:focus,
+        [data-testid="stSidebar"] textarea:focus {
+            border-color: var(--wp-petrol) !important;
+            box-shadow: 0 0 0 1px var(--wp-petrol) !important;
+        }
+
+        div[data-baseweb="select"] > div:focus-within {
+            border-color: var(--wp-petrol) !important;
+            box-shadow: 0 0 0 1px rgba(40, 122, 139, 0.20) !important;
+        }
+
+        [data-baseweb="checkbox"] [aria-checked="true"],
+        [data-baseweb="radio"] [aria-checked="true"] {
+            accent-color: var(--wp-petrol);
+        }
+
+        .stButton > button[kind="primary"],
+        .stDownloadButton > button[kind="primary"] {
+            background: var(--wp-petrol);
+            border-color: var(--wp-petrol);
+        }
+
+        [data-testid="stMetric"],
+        [data-testid="stDataFrame"] {
+            background: var(--wp-surface);
+        }
+
+        hr {
+            border-color: var(--wp-border);
+        }
+
+        /* Weergave-tabs / segmented controls */
+        [data-testid="stSegmentedControl"] button {
+            background: rgba(255, 255, 255, 0.88);
+            color: var(--wp-anthracite);
+            border-color: rgba(48, 56, 61, 0.14);
+            border-radius: 6px;
+            font-weight: 500;
+            transition:
+                background-color 120ms ease,
+                border-color 120ms ease,
+                color 120ms ease;
+        }
+
+        [data-testid="stSegmentedControl"] button:hover {
+            background: rgba(40, 122, 139, 0.07);
+            border-color: rgba(40, 122, 139, 0.28);
+            color: #236D7C;
+        }
+
+        [data-testid="stSegmentedControl"] button[aria-pressed="true"] {
+            background: rgba(40, 122, 139, 0.13);
+            border-color: rgba(40, 122, 139, 0.42);
+            color: #236D7C;
+            font-weight: 650;
+        }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
 
 # ============================================================
 # Gecachete database-oproepen

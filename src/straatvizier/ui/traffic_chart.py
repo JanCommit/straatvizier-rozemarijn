@@ -18,10 +18,23 @@ from straatvizier.ui.chart_helpers import (
     WEEKDAY_ABBR_NL,
 )
 
-MAIN_STREET_COLOR = "#1E88E5"
-COMPARE_STREET_COLOR = "#80649A"
-MAIN_TREND_COLOR = "#E8655B"
-COMPARE_TREND_COLOR = "#6F5A8C"
+# Achtkleurig verkeerspalet.
+# Per straat/richting hoort de gewone reeks bij een donkerdere trendkleur.
+# Primair A→B: licht petrol → petrol
+MAIN_STREET_COLOR = "#62A7B3"
+MAIN_TREND_COLOR = "#287A8B"
+
+# Primair B→A: licht oker → oker
+MAIN_STREET_ALT_COLOR = "#D0A04B"
+MAIN_TREND_ALT_COLOR = "#A87418"
+
+# Secundair A→B: fris lichtblauw → blauw
+COMPARE_STREET_COLOR = "#6AA5CC"
+COMPARE_TREND_COLOR = "#3476A8"
+
+# Secundair B→A: licht terracotta → terracotta
+COMPARE_STREET_ALT_COLOR = "#D48770"
+COMPARE_TREND_ALT_COLOR = "#A95643"
 
 
 def add_view(
@@ -40,19 +53,31 @@ def add_view(
     is_comparison=False,
     series_suffix=None,
     line_dash="solid",
+    direction_variant="primary",
 ):
     """Voeg de verkeersreeks(en) voor één gekozen dashboardweergave toe."""
-    street_color = (
-        COMPARE_STREET_COLOR
-        if is_comparison
-        else MAIN_STREET_COLOR
-    )
-
-    trend_color = (
-        COMPARE_TREND_COLOR
-        if is_comparison
-        else MAIN_TREND_COLOR
-    )
+    if is_comparison:
+        street_color = (
+            COMPARE_STREET_ALT_COLOR
+            if direction_variant == "secondary"
+            else COMPARE_STREET_COLOR
+        )
+        trend_color = (
+            COMPARE_TREND_ALT_COLOR
+            if direction_variant == "secondary"
+            else COMPARE_TREND_COLOR
+        )
+    else:
+        street_color = (
+            MAIN_STREET_ALT_COLOR
+            if direction_variant == "secondary"
+            else MAIN_STREET_COLOR
+        )
+        trend_color = (
+            MAIN_TREND_ALT_COLOR
+            if direction_variant == "secondary"
+            else MAIN_TREND_COLOR
+        )
 
     if view == "Per uur":
         data = hourly_with_gaps(
