@@ -82,8 +82,8 @@ from straatvizier.ui.speed_figure import (
 
 
 st.set_page_config(
-    page_title="StraatVizier",
-    page_icon="🚦",
+    page_title="WatPasseert?",
+    page_icon="assets/watpasseert-icon.png",
     layout="wide",
 )
 
