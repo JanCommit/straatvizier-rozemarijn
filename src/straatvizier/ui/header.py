@@ -73,14 +73,14 @@ def render_frozen_header(
             .sv-head {{
                 position: fixed;
                 top: 3.55rem;
-                left: 22rem;
+                left: 19rem;
                 right: 1rem;
                 z-index: 9999;
                 box-sizing: border-box;
                 background: linear-gradient(180deg, #2D3338 0%, #292E33 100%);
                 border: 1px solid rgba(255,255,255,.08);
                 border-radius: 10px;
-                padding: .78rem 1rem .68rem;
+                padding: .78rem 1rem .68rem 5rem;
                 margin-bottom: 1rem;
                 box-shadow: 0 6px 18px rgba(0,0,0,.11);
             }}
