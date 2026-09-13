@@ -309,15 +309,18 @@ def render_global_filters(street_names, default_index):
     )
 
     start_hour, end_hour = st.sidebar.slider(
-        "Uren",
+        "Geselecteerde uren",
         min_value=0,
         max_value=24,
         value=default_hours,
         step=1,
         help=(
-            "Standaard wordt voor verkeer bij daglicht 09:00–16:00 "
-            "gebruikt en voor verkeer zonder daglicht 00:00–04:00. "
-            "Andere uren kiezen wordt op aanvraag opnieuw berekend."
+            "Voor verkeer bij daglicht wordt standaard 09:00–16:00 "
+            "gebruikt, omdat deze uren gedurende het hele jaar bij daglicht "
+            "vallen. Voor verkeer zonder daglicht wordt standaard 00:00–04:00 "
+            "gebruikt, omdat deze uren gedurende het hele jaar in het donker "
+            "vallen. Andere uren kunnen vrij worden gekozen; de gegevens "
+            "worden dan opnieuw server-side berekend."
         ),
     )
 
@@ -363,6 +366,14 @@ def render_global_filters(street_names, default_index):
             "ⓘ Minimum geldige uren per dag is niet van toepassing "
             "op deze weergave."
         )
+
+    # Wordt later in app.py gevuld zodra de beschikbare meetperiode bekend is.
+    period_container = st.sidebar.container()
+
+    # ========================================================
+    # WEERGAVE
+    # ========================================================
+    section_title("WEERGAVE")
 
     y_axis_from_zero = st.sidebar.checkbox(
         "Y-as vanaf 0",
@@ -463,5 +474,6 @@ mogelijkheden en beperkingen van de gebruikte Telraam-sensoren.
         min_hours,
         y_axis_from_zero,
         show_data_quality,
+        period_container,
     )
 

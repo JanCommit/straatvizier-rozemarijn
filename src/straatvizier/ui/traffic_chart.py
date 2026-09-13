@@ -161,7 +161,7 @@ def add_view(
                     col=1,
                 )
 
-        return f"{label} binnen geselecteerde uren"
+        return f"{label} <br>binnen geselecteerde uren"
 
     if view == "Per week":
         data = weekly_data(

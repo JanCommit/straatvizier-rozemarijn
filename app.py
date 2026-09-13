@@ -334,6 +334,7 @@ default_index = (
     min_hours,
     y_axis_from_zero,
     show_data_quality,
+    period_container,
 ) = render_global_filters(
     street_names,
     default_index,
@@ -499,26 +500,27 @@ def reset_selected_period():
     )
 
 
-st.sidebar.date_input(
-    "Periode",
-    min_value=period_min,
-    max_value=period_max,
-    key="selected_period",
-)
+with period_container:
+    st.date_input(
+        "Periode",
+        min_value=period_min,
+        max_value=period_max,
+        key="selected_period",
+    )
 
-apply_col, reset_col = st.sidebar.columns(2)
+    apply_col, reset_col = st.columns(2)
 
-apply_col.button(
-    "Periode toepassen",
-    use_container_width=True,
-    on_click=apply_selected_period,
-)
+    apply_col.button(
+        "Periode toepassen",
+        use_container_width=True,
+        on_click=apply_selected_period,
+    )
 
-reset_col.button(
-    "Reset periode",
-    use_container_width=True,
-    on_click=reset_selected_period,
-)
+    reset_col.button(
+        "Reset periode",
+        use_container_width=True,
+        on_click=reset_selected_period,
+    )
 
 selected_dates = st.session_state.get(
     "applied_period",
