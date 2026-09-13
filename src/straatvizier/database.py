@@ -55,7 +55,44 @@ def get_streets() -> pd.DataFrame:
 
     return pd.DataFrame(rows)
 
+def submit_feedback(
+    message: str,
+    email: str | None = None,
+    street: str | None = None,
+) -> None:
+    """Sla een feedbackbericht veilig op in Supabase."""
 
+    message = (message or "").strip()
+    email = (email or "").strip() or None
+    street = (street or "").strip() or None
+
+    if not 5 <= len(message) <= 1000:
+        raise ValueError(
+            "Het bericht moet tussen 5 en 1000 tekens bevatten."
+        )
+
+    if email is not None and len(email) > 254:
+        raise ValueError(
+            "Het e-mailadres is te lang."
+        )
+
+    if street is not None and len(street) > 200:
+        raise ValueError(
+            "De straatnaam is te lang."
+        )
+
+    (
+        supabase
+        .table("feedback")
+        .insert(
+            {
+                "message": message,
+                "email": email,
+                "street": street,
+            }
+        )
+        .execute()
+    )
 def get_measurement_bounds(
     segment_id: int,
 ) -> tuple[pd.Timestamp | None, pd.Timestamp | None]:

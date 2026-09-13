@@ -464,6 +464,68 @@ mogelijkheden en beperkingen van de gebruikte Telraam-sensoren.
             """
         )
 
+    # ========================================================
+    # CONTACT / FEEDBACK
+    # ========================================================
+    feedback_submission = None
+
+    with st.sidebar.expander("CONTACT / FEEDBACK", expanded=False):
+        st.markdown(
+            "Heb je een vraag, opmerking of suggestie? "
+            "Stuur hier een bericht."
+        )
+
+        with st.form(
+            "feedback_form",
+            clear_on_submit=True,
+        ):
+            feedback_email = st.text_input(
+                "E-mailadres (optioneel)",
+                max_chars=254,
+                placeholder="naam@voorbeeld.be",
+            )
+
+            feedback_message = st.text_area(
+                "Bericht",
+                max_chars=1000,
+                height=120,
+                placeholder="Typ hier je bericht...",
+            )
+
+            st.caption(
+                "E-mailadres is optioneel. "
+                "Wil je graag een antwoord ontvangen? "
+                "Vul dan je e-mailadres in."
+            )
+
+            feedback_sent = st.form_submit_button(
+                "Bericht versturen",
+                use_container_width=True,
+            )
+
+        if feedback_sent:
+            message = feedback_message.strip()
+            email = feedback_email.strip()
+
+            if len(message) < 5:
+                st.error(
+                    "Schrijf een bericht van minstens 5 tekens."
+                )
+            elif email and (
+                "@" not in email
+                or email.startswith("@")
+                or email.endswith("@")
+            ):
+                st.error(
+                    "Vul een geldig e-mailadres in "
+                    "of laat het veld leeg."
+                )
+            else:
+                feedback_submission = {
+                    "message": message,
+                    "email": email or None,
+                }
+
     return (
         selected_street,
         compare,
@@ -484,5 +546,6 @@ mogelijkheden en beperkingen van de gebruikte Telraam-sensoren.
         y_axis_from_zero,
         show_data_quality,
         period_container,
+        feedback_submission,
     )
 

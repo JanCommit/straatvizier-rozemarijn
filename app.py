@@ -14,7 +14,7 @@ import streamlit as st
 
 
 LOCAL_TIMEZONE = "Europe/Brussels"
-APP_VERSION = "0.8.32"
+APP_VERSION = "1.0.0"
 
 PROJECT_ROOT = Path(__file__).resolve().parent
 SRC_DIR = PROJECT_ROOT / "src"
@@ -37,6 +37,7 @@ from straatvizier.database import (
     get_hourly_speed,
     get_daily_speed,
     get_speed_hour_profile,
+    submit_feedback,
 )
 
 
@@ -428,10 +429,31 @@ default_index = (
     y_axis_from_zero,
     show_data_quality,
     period_container,
+    feedback_submission,
 ) = render_global_filters(
     street_names,
     default_index,
 )
+
+if feedback_submission is not None:
+    try:
+        submit_feedback(
+            message=feedback_submission["message"],
+            email=feedback_submission["email"],
+            street=selected_street,
+        )
+    except (ValueError, RuntimeError):
+        st.sidebar.error(
+            "Het bericht kon niet worden verstuurd. "
+            "Controleer de invoer en probeer opnieuw."
+        )
+    except Exception:
+        st.sidebar.error(
+            "Het bericht kon tijdelijk niet worden verstuurd. "
+            "Probeer later opnieuw."
+        )
+    else:
+        st.sidebar.success("Bedankt. Je bericht is verstuurd.")
 
 # ============================================================
 # Segmenten en beschikbare periodes
