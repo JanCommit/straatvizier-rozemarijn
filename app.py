@@ -929,6 +929,7 @@ view = st.segmented_control(
     default="Per dag",
     selection_mode="single",
     label_visibility="collapsed",
+    key="traffic_view",
 )
 
 view = view or "Per dag"
@@ -1101,34 +1102,48 @@ st.plotly_chart(
 st.divider()
 
 with st.expander(
-    "ⓘ Hoe worden de verkeerscijfers berekend?"
+    "ⓘ\u2002Hoe worden de verkeerscijfers berekend?"
 ):
     st.markdown(
         f"""
 **Uptime en verkeerscijfers**
 
 Telraam corrigeert de verkeerswaarde van elk meetuur al voor de
-effectieve teltijd (*uptime*). StraatVizier voert daarom geen tweede
-uptimecorrectie uit.
+effectieve teltijd (*uptime*). WatPasseert? voert daarom geen tweede
+uptimecorrectie uit. Een lagere uptime betekent wel dat een uurwaarde
+op minder effectieve meettijd is gebaseerd en daardoor onzekerder kan zijn.
 
-- Uren met minder dan **{uptime_pct}% uptime** worden met de huidige
-  filters volledig uitgesloten.
-- Een dag wordt alleen als geldige dag meegenomen wanneer minstens
-  **{min_hours} geldige meeturen** beschikbaar zijn binnen
-  **{start_hour:02d}:00–{end_hour:02d}:00**.
-- Ontbrekende of uitgesloten uren en dagen worden niet aangevuld,
-  geïnterpoleerd of naar een volledige periode geëxtrapoleerd.
-- Week-, maand- en jaargemiddelden zijn gemiddelden over de geldige
-  dagen in die periode.
-- **Som over geldige dagen** is alleen de som van de beschikbare
-  geldige dagwaarden. Bij ontbrekende dagen is dit dus geen volledig
-  kalenderweek-, kalendermaand- of kalenderjaartotaal.
+- In **Per uur** worden alle beschikbare, door Telraam gecorrigeerde
+  uurwaarden getoond, ook onder **{uptime_pct}% uptime**.
+- In **Per dag** worden alle beschikbare gecorrigeerde uurwaarden binnen
+  **{start_hour:02d}:00–{end_hour:02d}:00** samengevoegd. Een beschikbaar
+  uur met lage uptime wordt dus niet uit het dagtotaal verwijderd.
+- Voor **Per week, Per maand en Per jaar** bepaalt de minimum uptime welke
+  uren als geldig tellen. Een dag wordt alleen in het gemiddelde opgenomen
+  wanneer minstens **{min_hours} geldige uren** beschikbaar zijn.
+- Week-, maand- en jaargemiddelden worden uitsluitend berekend over de
+  geldige dagen. Ontbrekende of ongeldige dagen worden niet als nul gerekend.
+
+**Profielen**
+
+- Het **24u-profiel** berekent per uur van de dag het gemiddelde over
+  metingen met minstens **{uptime_pct}% uptime** binnen de geselecteerde periode.
+- Het **weekprofiel** berekent per weekdag het gemiddelde over de geldige
+  dagen van dat type binnen de geselecteerde periode.
+- Het **jaarprofiel** berekent per kalendermaand het gemiddelde dagelijkse
+  verkeer over alle geldige dagen van die maand binnen de geselecteerde periode.
+
+**Datakwaliteit**
+
+**Minimum geldige uren per dag** is niet van toepassing op **Per uur**,
+**Per dag** en **24u-profiel** en wordt daar in de sidebar uitgeschakeld.
+Ontbrekende metingen worden niet geïnterpoleerd en ontbrekende dagen
+worden niet als nul behandeld.
 
 **Richtingen**
 
 Voor segmentdata geldt bij Telraam steeds **A → B = left** en
-**B → A = right**. StraatVizier gebruikt die vaste segmentoriëntatie
-en toont daarnaast per straat een herkenbaar geografisch richtingslabel.
+**B → A = right**. WatPasseert? gebruikt die vaste segmentoriëntatie.
 
 Bij straten met tramverkeer kan Telraam trams als **zwaar verkeer**
 classificeren. Een richtingswaarde voor zwaar verkeer is daarom niet
@@ -1146,7 +1161,7 @@ if show_data_quality:
 
     if view in {"Per uur", "Per dag", "24u-profiel"}:
         quality_label = "dag"
-        quality = valid_quality.copy()
+        quality = daily_main.copy()
         if not quality.empty:
             quality = quality.rename(
                 columns={

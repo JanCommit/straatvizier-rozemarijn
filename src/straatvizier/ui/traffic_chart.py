@@ -91,8 +91,9 @@ def add_view(
         return f"{label} per uur"
 
     if view == "Per dag":
+        # Per dag toont alle beschikbare Telraam-gecorrigeerde dagwaarden.
         data = add_missing_days_as_gaps(
-            valid
+            daily
         )
 
         if not data.empty:
@@ -160,7 +161,7 @@ def add_view(
                     col=1,
                 )
 
-        return f"{label} per dag"
+        return f"{label} binnen geselecteerde uren"
 
     if view == "Per week":
         data = weekly_data(
@@ -210,8 +211,8 @@ def add_view(
             )
 
         return (
-            f"Gemiddeld {label.lower()} "
-            f"per geldige dag"
+            f"Gemiddeld {label.lower()} <br>"
+            f"per geldige dag (geselecteerde uren)"
         )
 
     if view == "Per maand":
@@ -261,8 +262,8 @@ def add_view(
             )
 
         return (
-            f"Gemiddeld {label.lower()} "
-            f"per geldige dag"
+            f"Gemiddeld {label.lower()} <br>"
+            f"per geldige dag (geselecteerde uren)"
         )
 
     if view == "Per jaar":
@@ -318,8 +319,8 @@ def add_view(
             )
 
         return (
-            f"Gemiddeld {label.lower()} "
-            f"per geldige dag"
+            f"Gemiddeld {label.lower()} <br>"
+            f"per geldige dag (geselecteerde uren)"
         )
 
     if view == "24u-profiel":
@@ -330,14 +331,25 @@ def add_view(
         )
 
         if not data.empty:
+            data = data.copy()
+
+            data["hour_label"] = data["hour"].apply(
+                lambda h: (
+                    f"{int(h):02d}–"
+                    f"{(int(h) + 1):02d}u"
+                )
+            )
+
             fig.add_trace(
                 go.Scatter(
-                    x=data["hour"],
+                    x=data["hour_label"],
                     y=data["avg_traffic"],
+                    customdata=data["hour_label"],
                     mode="lines+markers",
                     name=(f"{street} · {series_suffix}" if series_suffix else street),
                     hovertemplate=(
-                        (
+                        "%{customdata}<br>"
+                        + (
                             f"{street} · {series_suffix}: "
                             if series_suffix
                             else f"{street}: "
@@ -358,13 +370,7 @@ def add_view(
                 col=1,
             )
 
-            fig.update_xaxes(
-                dtick=1,
-                row=row,
-                col=1,
-            )
-
-        return f"Gemiddeld {label.lower()}"
+        return f"Gemiddeld {label.lower()} <br>per uur (geselecteerde uren)"
 
     if view == "Weekprofiel":
         data = valid.copy()
@@ -422,8 +428,8 @@ def add_view(
             )
 
         return (
-            f"Gemiddeld {label.lower()} "
-            f"per dag"
+            f"Gemiddeld {label.lower()} <br>"
+            f"per geldige dag (geselecteerde uren)"
         )
 
     data = valid.copy()
@@ -484,6 +490,6 @@ def add_view(
         )
 
     return (
-        f"Gemiddeld {label.lower()} "
-        f"per dag"
+        f"Gemiddeld {label.lower()} <br>"
+        f"per geldige dag (geselecteerde uren)"
     )
