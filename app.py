@@ -14,7 +14,7 @@ import streamlit as st
 
 
 LOCAL_TIMEZONE = "Europe/Brussels"
-APP_VERSION = "0.8.31"
+APP_VERSION = "0.8.32"
 
 PROJECT_ROOT = Path(__file__).resolve().parent
 SRC_DIR = PROJECT_ROOT / "src"
