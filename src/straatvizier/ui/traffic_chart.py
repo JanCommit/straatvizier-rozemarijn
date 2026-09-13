@@ -19,22 +19,24 @@ from straatvizier.ui.chart_helpers import (
 )
 
 # Achtkleurig verkeerspalet.
-# Per straat/richting hoort de gewone reeks bij een donkerdere trendkleur.
-# Primair A→B: licht petrol → petrol
-MAIN_STREET_COLOR = "#62A7B3"
-MAIN_TREND_COLOR = "#287A8B"
+# Primaire straat = warme kleuren.
+# Vergelijkingsstraat = koele kleuren.
 
-# Primair B→A: licht oker → oker
-MAIN_STREET_ALT_COLOR = "#D0A04B"
-MAIN_TREND_ALT_COLOR = "#A87418"
+# Primair A→B: licht oker → oker
+MAIN_STREET_COLOR = "#D0A04B"
+MAIN_TREND_COLOR = "#A87418"
 
-# Secundair A→B: fris lichtblauw → blauw
-COMPARE_STREET_COLOR = "#6AA5CC"
-COMPARE_TREND_COLOR = "#3476A8"
+# Primair B→A: licht petrol → petrol
+MAIN_STREET_ALT_COLOR = "#62A7B3"
+MAIN_TREND_ALT_COLOR =  "#287A8B"
 
-# Secundair B→A: licht terracotta → terracotta
-COMPARE_STREET_ALT_COLOR = "#D48770"
-COMPARE_TREND_ALT_COLOR = "#A95643"
+# Secundair A→B: licht terracotta → terracotta
+COMPARE_STREET_COLOR = "#D48770"
+COMPARE_TREND_COLOR = "#A95643"
+
+# Secundair B→A: fris lichtblauw → blauw
+COMPARE_STREET_ALT_COLOR = "#6AA5CC"
+COMPARE_TREND_ALT_COLOR = "#3476A8"
 
 
 def add_view(

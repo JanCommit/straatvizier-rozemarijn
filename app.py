@@ -451,12 +451,9 @@ main_night_start = night_counts_start_date(
     selected_street
 )
 
-with st.spinner(
-    "Beschikbare periode laden..."
-):
-    main_first_utc, main_last_utc = (
-        cached_get_bounds(main_id)
-    )
+main_first_utc, main_last_utc = cached_get_bounds(
+    main_id
+)
 
 if (
     main_first_utc is None
@@ -498,15 +495,12 @@ if compare:
         comparison_street
     )
 
-    with st.spinner(
-        "Beschikbare periode vergelijkingsstraat laden..."
-    ):
-        (
-            comparison_first_utc,
-            comparison_last_utc,
-        ) = cached_get_bounds(
-            comparison_id
-        )
+    (
+        comparison_first_utc,
+        comparison_last_utc,
+    ) = cached_get_bounds(
+        comparison_id
+    )
 
     if (
         comparison_first_utc is None
@@ -677,32 +671,29 @@ if analysis_type == "Autosnelheid":
 
     # Dagelijkse histogrammen zijn compact en vormen de basis
     # voor dag/week/maand/jaar en de profielweergaven.
-    with st.spinner(
-        "Snelheidsgegevens verwerken..."
-    ):
-        speed_daily_main = (
-            cached_get_daily_speed(
-                main_id,
-                start_date.isoformat(),
-                end_date.isoformat(),
-                start_hour,
-                end_hour,
-                min_uptime,
-            )
+    speed_daily_main = (
+        cached_get_daily_speed(
+            main_id,
+            start_date.isoformat(),
+            end_date.isoformat(),
+            start_hour,
+            end_hour,
+            min_uptime,
         )
+    )
 
-        speed_daily_compare = (
-            cached_get_daily_speed(
-                comparison_id,
-                start_date.isoformat(),
-                end_date.isoformat(),
-                start_hour,
-                end_hour,
-                min_uptime,
-            )
-            if compare
-            else pd.DataFrame()
+    speed_daily_compare = (
+        cached_get_daily_speed(
+            comparison_id,
+            start_date.isoformat(),
+            end_date.isoformat(),
+            start_hour,
+            end_hour,
+            min_uptime,
         )
+        if compare
+        else pd.DataFrame()
+    )
 
     speed_valid_main = valid_daily_speed(
         speed_daily_main,
@@ -906,46 +897,40 @@ kunnen daarom ook de snelheidsverdeling beïnvloeden.
 daily_main_by_direction = {}
 daily_compare_by_direction = {}
 
-with st.spinner(
-    "Verkeersgegevens verwerken..."
-):
+for direction in directions:
+    daily_main_by_direction[direction] = cached_get_daily(
+        segment_id=main_id,
+        start_date=main_query_start.isoformat(),
+        end_date=end_date.isoformat(),
+        start_hour=start_hour,
+        end_hour=end_hour,
+        min_uptime=min_uptime,
+        direction=direction,
+        night_start_date=(
+            main_night_start.isoformat()
+            if main_night_start is not None
+            else None
+        ),
+        **flags,
+    )
+
+if compare:
     for direction in directions:
-        daily_main_by_direction[direction] = cached_get_daily(
-            segment_id=main_id,
-            start_date=main_query_start.isoformat(),
+        daily_compare_by_direction[direction] = cached_get_daily(
+            segment_id=comparison_id,
+            start_date=comparison_query_start.isoformat(),
             end_date=end_date.isoformat(),
             start_hour=start_hour,
             end_hour=end_hour,
             min_uptime=min_uptime,
             direction=direction,
             night_start_date=(
-                main_night_start.isoformat()
-                if main_night_start is not None
+                comparison_night_start.isoformat()
+                if comparison_night_start is not None
                 else None
             ),
             **flags,
         )
-
-if compare:
-    with st.spinner(
-        "Vergelijkingsgegevens verwerken..."
-    ):
-        for direction in directions:
-            daily_compare_by_direction[direction] = cached_get_daily(
-                segment_id=comparison_id,
-                start_date=comparison_query_start.isoformat(),
-                end_date=end_date.isoformat(),
-                start_hour=start_hour,
-                end_hour=end_hour,
-                min_uptime=min_uptime,
-                direction=direction,
-                night_start_date=(
-                    comparison_night_start.isoformat()
-                    if comparison_night_start is not None
-                    else None
-                ),
-                **flags,
-            )
 
 # Voor header en datakwaliteit gebruiken we bij een opgesplitste
 # weergave de A→B-reeks; uptime/uren zijn identiek voor beide richtingen.
@@ -1035,8 +1020,10 @@ show_rolling = False
 rolling_days = 31
 
 if view == "Per dag":
-    col_roll, col_window, col_space = st.columns(
-        [2.4, 1.0, 4.6]
+    col_roll, col_label, col_window, col_space = st.columns(
+        [1.55, 0.35, 0.85, 5.25],
+        gap="small",
+        vertical_alignment="center",
     )
 
     with col_roll:
@@ -1045,20 +1032,18 @@ if view == "Per dag":
             value=True,
         )
 
+    with col_label:
+        st.markdown("Venster")
+
     with col_window:
         rolling_days = st.selectbox(
             "Venster",
-            [
-                7,
-                31,
-                91,
-            ],
+            [7, 31, 91],
             index=1,
-            format_func=lambda value:
-                f"{value} dagen",
+            format_func=lambda value: f"{value} dagen",
             disabled=not show_rolling,
+            label_visibility="collapsed",
         )
-
 
 # ============================================================
 # Lazy loading zware weergaven
