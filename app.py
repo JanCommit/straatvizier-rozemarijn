@@ -189,7 +189,7 @@ st.markdown(
 # ============================================================
 
 @st.cache_data(
-    ttl=86400,
+    ttl=3600,
     show_spinner=False,
 )
 def cached_get_streets():
