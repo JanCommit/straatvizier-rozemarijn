@@ -197,7 +197,7 @@ def cached_get_streets():
 
 
 @st.cache_data(
-    ttl=86400,
+    ttl=3600,
     show_spinner=False,
 )
 def cached_get_bounds(segment_id: int):
@@ -584,8 +584,11 @@ period_max = max(
     if date is not None
 )
 
-# De datumwidget is een "conceptperiode". De grafieken gebruiken pas
-# de toegepaste periode nadat de gebruiker expliciet op de knop klikt.
+# De periode heeft twee expliciete modi:
+# - max: volg automatisch de volledige beschikbare periode van de actieve
+#   straat of, bij vergelijking, van beide straten samen;
+# - specific: behoud exact de door de gebruiker gekozen datums, ook wanneer
+#   de straatcontext verandert.
 initialize_period_state(
     selected_street=selected_street,
     comparison_street=comparison_street,
@@ -602,38 +605,62 @@ def apply_selected_period():
     )
 
 
-def reset_selected_period():
-    reset_period_state(
-        period_min,
-        period_max,
-    )
+def handle_period_mode_change():
+    if st.session_state.get("period_mode") == "max":
+        reset_period_state(
+            period_min,
+            period_max,
+        )
 
+
+period_help = (
+    "Maximale periode toont automatisch de volledige beschikbare "
+    "meetperiode van de geselecteerde straat of, bij vergelijking, "
+    "van beide straten samen. Specifieke periode gebruikt altijd exact "
+    "de gekozen datums, ook wanneer je van straat wisselt. Als binnen "
+    "die periode geen metingen beschikbaar zijn, worden geen gegevens "
+    "getoond."
+)
 
 with period_container:
-    st.date_input(
+    period_mode = st.radio(
         "Periode",
-        min_value=period_min,
-        max_value=period_max,
-        key="selected_period",
+        options=["max", "specific"],
+        format_func=lambda value: (
+            "Maximale periode"
+            if value == "max"
+            else "Specifieke periode"
+        ),
+        key="period_mode",
+        help=period_help,
+        on_change=handle_period_mode_change,
     )
 
-    apply_col, reset_col = st.columns(2)
+    if period_mode == "max":
+        st.caption(
+            "Beschikbare periode: "
+            f"{period_min.strftime('%d/%m/%Y')} – "
+            f"{period_max.strftime('%d/%m/%Y')}"
+        )
+    else:
+        st.date_input(
+            "Specifieke periode",
+            key="selected_period",
+        )
 
-    apply_col.button(
-        "Periode toepassen",
-        use_container_width=True,
-        on_click=apply_selected_period,
+        st.button(
+            "Periode toepassen",
+            use_container_width=True,
+            on_click=apply_selected_period,
+        )
+
+selected_dates = (
+    (period_min, period_max)
+    if st.session_state.get("period_mode", "max") == "max"
+    else st.session_state.get(
+        "applied_period",
+        (period_min, period_max),
     )
-
-    reset_col.button(
-        "Reset periode",
-        use_container_width=True,
-        on_click=reset_selected_period,
-    )
-
-selected_dates = st.session_state.get(
-    "applied_period",
-    (period_min, period_max),
 )
 
 if (
