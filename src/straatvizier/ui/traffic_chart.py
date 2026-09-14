@@ -23,20 +23,20 @@ from straatvizier.ui.chart_helpers import (
 # Vergelijkingsstraat = koele kleuren.
 
 # Primair A→B: licht oker → oker
-MAIN_STREET_COLOR = "#D0A04B"
-MAIN_TREND_COLOR = "#A87418"
+MAIN_STREET_COLOR = "#62A7B3"
+MAIN_TREND_COLOR = "#287A8B"
 
 # Primair B→A: licht petrol → petrol
-MAIN_STREET_ALT_COLOR = "#62A7B3"
-MAIN_TREND_ALT_COLOR =  "#287A8B"
+MAIN_STREET_ALT_COLOR ="#D0A04B"
+MAIN_TREND_ALT_COLOR =  "#A87418"
 
 # Secundair A→B: licht terracotta → terracotta
-COMPARE_STREET_COLOR = "#D48770"
-COMPARE_TREND_COLOR = "#A95643"
+COMPARE_STREET_COLOR =  "#6AA5CC"
+COMPARE_TREND_COLOR = "#3476A8"
 
 # Secundair B→A: fris lichtblauw → blauw
-COMPARE_STREET_ALT_COLOR = "#6AA5CC"
-COMPARE_TREND_ALT_COLOR = "#3476A8"
+COMPARE_STREET_ALT_COLOR = "#D48770"
+COMPARE_TREND_ALT_COLOR = "#A95643"
 
 
 def add_view(

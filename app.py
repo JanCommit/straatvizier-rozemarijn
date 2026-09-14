@@ -1043,7 +1043,7 @@ rolling_days = 31
 
 if view == "Per dag":
     col_roll, col_label, col_window, col_space = st.columns(
-        [1.55, 0.35, 0.85, 5.25],
+        [1.55, 0.55, 0.85, 5.05],
         gap="small",
         vertical_alignment="center",
     )
