@@ -700,6 +700,58 @@ flags["include_night"] = include_night
 st.sidebar.divider()
 st.sidebar.caption(f"WatPasseert? v{APP_VERSION}")
 
+# Twee visueel gescheiden knoppengroepen met één gedeelde selectie.
+TIME_VIEWS = ["Per uur", "Per dag", "Per week", "Per maand", "Per jaar"]
+PROFILE_VIEWS = ["24u-profiel", "Weekprofiel", "Jaarprofiel"]
+
+
+def render_view_selector(state_key):
+    time_key = f"{state_key}_time_group"
+    profile_key = f"{state_key}_profile_group"
+
+    active = st.session_state.get(state_key, "Per dag")
+    if active not in TIME_VIEWS + PROFILE_VIEWS:
+        active = "Per dag"
+    st.session_state[state_key] = active
+
+    # Synchroniseer de twee widgets vóór ze worden aangemaakt.
+    st.session_state[time_key] = active if active in TIME_VIEWS else None
+    st.session_state[profile_key] = active if active in PROFILE_VIEWS else None
+
+    def select_view(changed_key, other_key):
+        chosen = st.session_state.get(changed_key)
+        if chosen is None:
+            # Houd steeds één keuze actief.
+            st.session_state[changed_key] = st.session_state[state_key]
+            return
+        st.session_state[state_key] = chosen
+        st.session_state[other_key] = None
+
+    # Horizontale container houdt de twee knoppengroepen dicht bij elkaar,
+    # zonder extra lege ruimte door brede Streamlit-kolommen.
+    with st.container(horizontal=True, gap="small"):
+        st.segmented_control(
+            "Tijdsindeling",
+            TIME_VIEWS,
+            key=time_key,
+            selection_mode="single",
+            label_visibility="collapsed",
+            on_change=select_view,
+            args=(time_key, profile_key),
+        )
+        st.segmented_control(
+            "Profielen",
+            PROFILE_VIEWS,
+            key=profile_key,
+            selection_mode="single",
+            label_visibility="collapsed",
+            on_change=select_view,
+            args=(profile_key, time_key),
+        )
+
+    return st.session_state[state_key]
+
+
 # ============================================================
 # Autosnelheid
 # Deze tak stopt na het renderen van de snelheidsanalyse. Daardoor wordt de
@@ -707,17 +759,6 @@ st.sidebar.caption(f"WatPasseert? v{APP_VERSION}")
 # ============================================================
 
 if analysis_type == "Autosnelheid":
-    speed_views = [
-        "Per uur",
-        "Per dag",
-        "Per week",
-        "Per maand",
-        "Per jaar",
-        "24u-profiel",
-        "Weekprofiel",
-        "Jaarprofiel",
-    ]
-
     # Dagelijkse histogrammen zijn compact en vormen de basis
     # voor dag/week/maand/jaar en de profielweergaven.
     speed_daily_main = (
@@ -776,14 +817,7 @@ if analysis_type == "Autosnelheid":
         comparison_layout=comparison_layout,
     )
 
-    speed_view = st.segmented_control(
-        "Weergave",
-        speed_views,
-        default="Per dag",
-        selection_mode="single",
-        label_visibility="collapsed",
-        key="speed_view",
-    ) or "Per dag"
+    speed_view = render_view_selector("speed_view")
 
     speed_hourly_main = pd.DataFrame()
     speed_hourly_compare = pd.DataFrame()
@@ -1041,27 +1075,7 @@ render_frozen_header(
 # geladen moeten worden. Het voortschrijdend gemiddelde bestaat alleen per dag.
 # ============================================================
 
-views = [
-    "Per uur",
-    "Per dag",
-    "Per week",
-    "Per maand",
-    "Per jaar",
-    "24u-profiel",
-    "Weekprofiel",
-    "Jaarprofiel",
-]
-
-view = st.segmented_control(
-    "Weergave",
-    views,
-    default="Per dag",
-    selection_mode="single",
-    label_visibility="collapsed",
-    key="traffic_view",
-)
-
-view = view or "Per dag"
+view = render_view_selector("traffic_view")
 
 
 # Rolling controls: compact
