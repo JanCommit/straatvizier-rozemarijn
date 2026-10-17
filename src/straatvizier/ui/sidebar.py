@@ -252,7 +252,7 @@ def render_global_filters(street_names, default_index):
                 "B → A",
                 "Richtingen apart tonen",
             ],
-            index=0,
+            index=3,
             help=(
                 "Telraam-segmentdata gebruiken een vaste oriëntatie: "
                 "A → B komt overeen met de opgeslagen *_left-waarden en "
