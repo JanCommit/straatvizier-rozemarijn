@@ -1,5 +1,8 @@
 """Definieer de globale Streamlit-filters en vertaal ze naar applicatiekeuzes."""
 
+import base64
+from pathlib import Path
+
 import streamlit as st
 
 from straatvizier.analysis import MODES
@@ -36,9 +39,13 @@ def render_global_filters(street_names, default_index):
     # ========================================================
     # LOGO
     # ========================================================
-    st.sidebar.image(
-        "assets/watpasseert-logo.png",
-        use_container_width=True,
+    # Toon het logo als gewone HTML-afbeelding, zonder Streamlit-fullscreenknop.
+    logo_path = Path(__file__).resolve().parents[3] / "assets" / "watpasseert-logo.png"
+    logo_base64 = base64.b64encode(logo_path.read_bytes()).decode("ascii")
+    st.sidebar.markdown(
+        f'<img src="data:image/png;base64,{logo_base64}" '
+        'alt="WatPasseert?" style="display:block;width:100%;height:auto;">',
+        unsafe_allow_html=True,
     )
 
     # ========================================================

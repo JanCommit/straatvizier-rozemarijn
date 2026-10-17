@@ -86,6 +86,7 @@ st.set_page_config(
     page_title="WatPasseert?",
     page_icon="assets/watpasseert-icon.png",
     layout="wide",
+    initial_sidebar_state="expanded",
 )
 
 st.markdown(
@@ -114,6 +115,17 @@ st.markdown(
         [data-testid="stSidebar"] {
             background: #F2F5F4;
             border-right: 1px solid var(--wp-border);
+        }
+
+        /* Verberg de afbeeldingswerkbalk alleen in de zijbalk (logo). */
+        [data-testid="stSidebar"] [data-testid="stImage"] [data-testid="stElementToolbar"] {
+            display: none !important;
+        }
+
+        /* Houd de zijbalk zichtbaar: verberg de inklapknoppen. */
+        [data-testid="stSidebarCollapseButton"],
+        [data-testid="collapsedControl"] {
+            display: none !important;
         }
 
         [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] a {
